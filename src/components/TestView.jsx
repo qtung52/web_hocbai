@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { extractQuestionAndOptions, shuffleArray, formatDuration } from '../utils/quizParser';
 
-export default function TestView({ quizSet, config, onCancel, onSubmit }) {
+export default function TestView({ quizSet, config, onCancel, onSubmit, showConfirm }) {
     const [testQuestions, setTestQuestions] = useState([]);
     const [userAnswers, setUserAnswers] = useState({}); // { [qId]: selectedLetter }
     const [seconds, setSeconds] = useState(0);
@@ -48,7 +48,8 @@ export default function TestView({ quizSet, config, onCancel, onSubmit }) {
                     options: finalOptions,
                     correctAnswer: newCorrectLetter,
                     correctAnswerText: correctOptText,
-                    originalQuestion: origQ.question
+                    originalQuestion: origQ.question,
+                    image: origQ.image || ''
                 };
             });
 
@@ -86,9 +87,9 @@ export default function TestView({ quizSet, config, onCancel, onSubmit }) {
     };
 
     const handleCancel = () => {
-        if (window.confirm('Tiến trình làm bài kiểm tra hiện tại sẽ bị mất. Bạn vẫn muốn thoát chứ?')) {
+        showConfirm('Tiến trình làm bài kiểm tra hiện tại sẽ bị mất. Bạn vẫn muốn thoát chứ?', () => {
             onCancel();
-        }
+        });
     };
 
     const handleSubmit = (e) => {
@@ -96,43 +97,48 @@ export default function TestView({ quizSet, config, onCancel, onSubmit }) {
         const answeredCount = Object.keys(userAnswers).length;
         const total = testQuestions.length;
 
-        if (answeredCount < total) {
-            if (!window.confirm(`Bạn mới trả lời ${answeredCount} / ${total} câu hỏi. Bạn có chắc chắn muốn nộp bài chứ?`)) {
-                return;
-            }
-        }
+        const processSubmit = () => {
+            // Calculate score
+            let correctCount = 0;
+            const reviewDetails = testQuestions.map(q => {
+                const userAns = userAnswers[q.id] || '';
+                const correct = userAns.toLowerCase() === q.correctAnswer.toLowerCase();
+                if (correct) correctCount++;
 
-        // Calculate score
-        let correctCount = 0;
-        const reviewDetails = testQuestions.map(q => {
-            const userAns = userAnswers[q.id] || '';
-            const correct = userAns.toLowerCase() === q.correctAnswer.toLowerCase();
-            if (correct) correctCount++;
+                return {
+                    description: q.description,
+                    options: q.options,
+                    userAnswer: userAns,
+                    correctAnswer: q.correctAnswer,
+                    correctAnswerText: q.correctAnswerText,
+                    isCorrect: correct,
+                    image: q.image || ''
+                };
+            });
 
-            return {
-                description: q.description,
-                options: q.options,
-                userAnswer: userAns,
-                correctAnswer: q.correctAnswer,
-                correctAnswerText: q.correctAnswerText,
-                isCorrect: correct
+            const accuracy = (correctCount / total) * 100;
+            const attempt = {
+                id: 'attempt-' + Date.now(),
+                quizId: quizSet.id,
+                quizTitle: quizSet.title,
+                createdAt: new Date().toISOString(),
+                duration: seconds,
+                correctCount,
+                totalCount: total,
+                accuracy,
+                reviewDetails
             };
-        });
 
-        const accuracy = (correctCount / total) * 100;
-        const attempt = {
-            id: 'attempt-' + Date.now(),
-            quizId: quizSet.id,
-            quizTitle: quizSet.title,
-            createdAt: new Date().toISOString(),
-            duration: seconds,
-            correctCount,
-            totalCount: total,
-            accuracy,
-            reviewDetails
+            onSubmit(attempt);
         };
 
-        onSubmit(attempt);
+        if (answeredCount < total) {
+            showConfirm(`Bạn mới trả lời ${answeredCount} / ${total} câu hỏi. Bạn có chắc chắn muốn nộp bài chứ?`, () => {
+                processSubmit();
+            });
+        } else {
+            processSubmit();
+        }
     };
 
     const totalQuestions = testQuestions.length;
@@ -166,6 +172,11 @@ export default function TestView({ quizSet, config, onCancel, onSubmit }) {
                                         <div className="question-badge" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }}>
                                             Câu hỏi {idx + 1}
                                         </div>
+                                        {q.image && (
+                                            <div className="question-image-container" style={{ marginTop: '12px', marginBottom: '16px', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxWidth: '100%', maxHeight: '240px', display: 'flex', justifyContent: 'center', backgroundColor: 'var(--bg-app)' }}>
+                                                <img src={q.image} alt="Minh họa câu hỏi" style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain' }} />
+                                            </div>
+                                        )}
                                         <h3 className="question-text" style={{ fontSize: '18px', fontWeight: '600', marginTop: '8px', marginBottom: '16px', whiteSpace: 'pre-line' }}>
                                             {q.description}
                                         </h3>

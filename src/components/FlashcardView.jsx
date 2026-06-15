@@ -47,6 +47,7 @@ export default function FlashcardView({ quizSet, onExit }) {
             const initialDeck = shuffled.map((q, idx) => ({
                 question: q.question,
                 answer: q.answer,
+                image: q.image || '',
                 id: `fc-${idx}-${Date.now()}`,
                 recallLevel: 'new',
                 easyFirstTry: true
@@ -85,6 +86,18 @@ export default function FlashcardView({ quizSet, onExit }) {
             if (e.code === 'Space') {
                 e.preventDefault();
                 handleFlip();
+            } else if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                if (index > 0) {
+                    setIndex(index - 1);
+                    setFlipped(false);
+                }
+            } else if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                if (index < deck.length - 1) {
+                    setIndex(index + 1);
+                    setFlipped(false);
+                }
             } else if (flipped) {
                 if (e.key === '1') {
                     handleRateRecall('hard');
@@ -139,6 +152,7 @@ export default function FlashcardView({ quizSet, onExit }) {
                             setDeck(shuffled.map((q, idx) => ({
                                 question: q.question,
                                 answer: q.answer,
+                                image: q.image || '',
                                 id: `fc-${idx}-${Date.now()}`,
                                 recallLevel: 'new',
                                 easyFirstTry: true
@@ -204,6 +218,12 @@ export default function FlashcardView({ quizSet, onExit }) {
         setFlipped(false);
         setDeck(updatedDeck);
 
+        // Adjust index if out of bounds after deletion/splicing
+        if (updatedDeck.length > 0) {
+            const nextIndex = index >= updatedDeck.length ? Math.max(0, updatedDeck.length - 1) : index;
+            setIndex(nextIndex);
+        }
+
         // Check if finished
         if (updatedDeck.length === 0) {
             setIsSessionFinished(true);
@@ -265,53 +285,115 @@ export default function FlashcardView({ quizSet, onExit }) {
                         </div>
                     </div>
 
-                    {/* Interactive 3D Card Area */}
-                    <div className="flashcard-card-wrapper" onClick={handleFlip}>
-                        <div className={`flashcard-card ${flipped ? 'flipped' : ''}`}>
-                            {/* Front Side */}
-                            <div className="flashcard-side card-front">
-                                <div className="card-side-tag">MẶT TRƯỚC - CÂU HỎI & LỰA CHỌN</div>
-                                <div className="card-content-scroll" style={{ width: '100%' }}>
-                                    <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '20px', whiteSpace: 'pre-line' }}>{parsed.description}</h2>
-                                    
-                                    {/* choices list on front side of the card as required! */}
-                                    {parsed.options.length > 0 && (
-                                        <div className="fc-options-grid" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '520px', margin: '0 auto', textAlign: 'left' }}>
-                                            {parsed.options.map(opt => (
-                                                <div 
-                                                    key={opt.letter} 
-                                                    className="fc-option-card"
-                                                    style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', backgroundColor: 'var(--bg-app)', display: 'flex', alignItems: 'center' }}
-                                                >
-                                                    <strong style={{ marginRight: '8px' }}>{opt.letter}.</strong>
-                                                    <span>{opt.text}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="card-hint">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{ marginRight: '4px', display: 'inline', verticalAlign: 'middle' }}>
-                                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-.57-8.38l5.67-5.67"/>
-                                    </svg>
-                                    Chạm vào thẻ hoặc Space để lật mặt sau 🔄
-                                </div>
-                            </div>
-                            
-                            {/* Back Side */}
-                            <div className="flashcard-side card-back">
-                                <div className="card-side-tag">MẶT SAU - ĐÁP ÁN</div>
-                                <div className="card-content-scroll">
-                                    <div className="fc-answer-container">
-                                        <small style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '8px', fontWeight: '600' }}>Đáp án đúng là:</small>
-                                        <h3 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--success)' }}>
-                                            {getOptionText(correctAnswer)}
-                                        </h3>
+                    {/* Stage Row: Left Arrow + 3D Card + Right Arrow */}
+                    <div className="flashcard-stage-row">
+                        <button 
+                            type="button" 
+                            className="btn-nav-arrow" 
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (index > 0) {
+                                    setIndex(index - 1);
+                                    setFlipped(false);
+                                }
+                            }}
+                            disabled={index === 0}
+                            aria-label="Câu trước"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="20" height="20">
+                                <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+
+                        <div className="flashcard-card-wrapper" onClick={handleFlip}>
+                            <div className={`flashcard-card ${flipped ? 'flipped' : ''}`}>
+                                {/* Front Side */}
+                                <div className="flashcard-side card-front">
+                                    <div className="card-side-tag">MẶT TRƯỚC - CÂU HỎI & LỰA CHỌN</div>
+                                    <div className="card-content-scroll" style={{ width: '100%' }}>
+                                        {currentCard.image && (
+                                            <div className="card-image-container">
+                                                <img src={currentCard.image} alt="Minh họa" />
+                                            </div>
+                                        )}
+                                        <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '20px', whiteSpace: 'pre-line' }}>{parsed.description}</h2>
+                                        
+                                        {/* choices list on front side of the card as required! */}
+                                        {parsed.options.length > 0 && (
+                                            <div className="fc-options-grid" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '520px', margin: '0 auto', textAlign: 'left' }}>
+                                                {parsed.options.map(opt => (
+                                                    <div 
+                                                        key={opt.letter} 
+                                                        className="fc-option-card"
+                                                        style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', backgroundColor: 'var(--bg-app)', display: 'flex', alignItems: 'center' }}
+                                                    >
+                                                        <strong style={{ marginRight: '8px' }}>{opt.letter}.</strong>
+                                                        <span>{opt.text}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="card-hint">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{ marginRight: '4px', display: 'inline', verticalAlign: 'middle' }}>
+                                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-.57-8.38l5.67-5.67"/>
+                                        </svg>
+                                        Chạm vào thẻ hoặc Space để lật mặt sau 🔄
                                     </div>
                                 </div>
-                                <div className="card-hint">Đáp án hệ thống</div>
+                                
+                                {/* Back Side */}
+                                <div className="flashcard-side card-back">
+                                    <div className="card-side-tag">MẶT SAU - ĐÁP ÁN</div>
+                                    <div className="card-content-scroll">
+                                        <div className="fc-answer-container">
+                                            <small style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '8px', fontWeight: '600' }}>Đáp án đúng là:</small>
+                                            <h3 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--success)' }}>
+                                                {getOptionText(correctAnswer)}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div className="card-hint">Đáp án hệ thống</div>
+                                </div>
                             </div>
                         </div>
+
+                        <button 
+                            type="button" 
+                            className="btn-nav-arrow" 
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (index < deck.length - 1) {
+                                    setIndex(index + 1);
+                                    setFlipped(false);
+                                }
+                            }}
+                            disabled={index === deck.length - 1}
+                            aria-label="Câu tiếp theo"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="20" height="20">
+                                <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Index Jump Navigation */}
+                    <div className="flashcard-nav-dots">
+                        {deck.map((card, idx) => (
+                            <button
+                                key={card.id}
+                                type="button"
+                                className={`nav-dot-btn ${index === idx ? 'active' : ''} status-${card.recallLevel}`}
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setIndex(idx); 
+                                    setFlipped(false); 
+                                }}
+                                title={`Câu ${idx + 1}`}
+                            >
+                                {idx + 1}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Controls: Flip button and Recall rating buttons */}

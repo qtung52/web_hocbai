@@ -122,6 +122,11 @@ export default function ResultsView({ attempt, onRetry, onPracticeFlashcard, onH
                                     <h4 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '12px', whiteSpace: 'pre-line' }}>
                                         Câu {idx + 1}: {item.description}
                                     </h4>
+                                    {item.image && (
+                                        <div className="review-image-container" style={{ marginBottom: '12px', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxWidth: '100%', maxHeight: '200px', display: 'flex', justifyContent: 'flex-start', backgroundColor: 'var(--bg-app)' }}>
+                                            <img src={item.image} alt="Minh họa câu hỏi" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
+                                        </div>
+                                    )}
 
                                     {item.options.length > 0 ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

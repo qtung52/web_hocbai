@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { extractQuestionAndOptions, shuffleArray } from '../utils/quizParser';
 
-export default function PracticeView({ quizSet, onExit }) {
+export default function PracticeView({ quizSet, onExit, showAlert }) {
     const [shuffledQuestions, setShuffledQuestions] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedOption, setSelectedOption] = useState('');
@@ -42,7 +42,7 @@ export default function PracticeView({ quizSet, onExit }) {
     const handleCheckAnswer = () => {
         const userAnswer = parsed.options.length > 0 ? selectedOption : textAnswer;
         if (!userAnswer.trim()) {
-            alert('Vui lòng nhập hoặc chọn câu trả lời trước khi kiểm tra.');
+            showAlert('Vui lòng nhập hoặc chọn câu trả lời trước khi kiểm tra.');
             return;
         }
 
@@ -56,8 +56,7 @@ export default function PracticeView({ quizSet, onExit }) {
             setCurrentIndex(currentIndex + 1);
             resetQuestionState();
         } else {
-            alert('Chúc mừng! Bạn đã hoàn thành việc ôn tập tất cả các câu hỏi trong bộ đề này.');
-            onExit();
+            showAlert('Chúc mừng! Bạn đã hoàn thành việc ôn tập tất cả các câu hỏi trong bộ đề này.', 'Thông báo', onExit);
         }
     };
 
@@ -95,6 +94,11 @@ export default function PracticeView({ quizSet, onExit }) {
                     {/* Question Content */}
                     <div className="question-body">
                         <div className="question-badge">CÂU HỎI</div>
+                        {currentQuestion.image && (
+                            <div className="question-image-container" style={{ marginBottom: '16px', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxWidth: '100%', maxHeight: '300px', display: 'flex', justifyContent: 'center', backgroundColor: 'var(--bg-app)' }}>
+                                <img src={currentQuestion.image} alt="Minh họa câu hỏi" style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }} />
+                            </div>
+                        )}
                         <h2 className="question-text" style={{ whiteSpace: 'pre-line' }}>{parsed.description}</h2>
                     </div>
 

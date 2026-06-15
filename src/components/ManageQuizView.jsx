@@ -1,24 +1,52 @@
 import React, { useState, useEffect } from 'react';
+import { compressAndResizeImage } from '../utils/quizParser';
 
-export default function ManageQuizView({ editingQuizSet, onSave, onCancel }) {
+export default function ManageQuizView({ quizSets, editingQuizSet, onSave, onCancel, showAlert, showConfirm }) {
     const [title, setTitle] = useState('');
     const [inputMode, setInputMode] = useState('text'); // 'text' | 'form'
     const [rawText, setRawText] = useState('');
-    const [formQuestions, setFormQuestions] = useState([{ id: 'init-1', question: '', answer: '' }]);
+    const [formQuestions, setFormQuestions] = useState([{ id: 'init-1', question: '', answer: '', image: '' }]);
+    
+    // Folder State
+    const [folder, setFolder] = useState('Chưa phân loại');
+    const [newFolder, setNewFolder] = useState('');
+    const [isNewFolder, setIsNewFolder] = useState(false);
+
+    // Unique folders list calculation
+    const existingFolders = Array.from(new Set((quizSets || []).map(s => s.folder).filter(Boolean)));
+    const foldersList = existingFolders.includes('Chưa phân loại') 
+        ? existingFolders 
+        : ['Chưa phân loại', ...existingFolders];
 
     // Initialize form with editing data or defaults
     useEffect(() => {
         if (editingQuizSet) {
             setTitle(editingQuizSet.title);
+            setFolder(editingQuizSet.folder || 'Chưa phân loại');
+            setIsNewFolder(false);
+            setNewFolder('');
             const raw = formatQuestionsToRawText(editingQuizSet.questions);
             setRawText(raw);
-            setFormQuestions(editingQuizSet.questions.map((q, idx) => ({
+            const initialQuestions = editingQuizSet.questions.map((q, idx) => ({
                 id: `edit-${idx}-${Date.now()}`,
                 question: q.question,
-                answer: q.answer
-            })));
+                answer: q.answer,
+                image: q.image || ''
+            }));
+            setFormQuestions(initialQuestions);
+
+            // Default to 'form' mode if editing an existing quiz with images to preserve them
+            const hasImages = editingQuizSet.questions.some(q => q.image);
+            if (hasImages) {
+                setInputMode('form');
+            } else {
+                setInputMode('text');
+            }
         } else {
             setTitle('');
+            setFolder('Chưa phân loại');
+            setIsNewFolder(false);
+            setNewFolder('');
             setRawText(`câu 1: Đây là câu hỏi ví dụ thứ nhất?
 A. Lựa chọn 1
 B. Lựa chọn 2
@@ -32,9 +60,9 @@ B. Lựa chọn B
 C. Lựa chọn C
 D. Lựa chọn D
 Answer: C`);
-            setFormQuestions([{ id: 'init-1', question: '', answer: '' }]);
+            setFormQuestions([{ id: 'init-1', question: '', answer: '', image: '' }]);
+            setInputMode('text');
         }
-        setInputMode('text');
     }, [editingQuizSet]);
 
     // Format questions array to raw text string
@@ -108,13 +136,27 @@ Answer: C`);
             // From text to form
             const parsed = parseRawTextToQuestions(rawText);
             if (parsed.length > 0) {
-                setFormQuestions(parsed.map((q, idx) => ({
-                    id: `parsed-${idx}-${Date.now()}`,
-                    question: q.question,
-                    answer: q.answer
-                })));
+                setFormQuestions(parsed.map((q, idx) => {
+                    // Match by text or index to preserve previous question images
+                    let matchedImg = '';
+                    const matchedByText = formQuestions.find(fq => fq.question.trim() === q.question.trim());
+                    if (matchedByText) {
+                        matchedImg = matchedByText.image;
+                    } else {
+                        const matchedByIndex = formQuestions[idx];
+                        if (matchedByIndex) {
+                            matchedImg = matchedByIndex.image;
+                        }
+                    }
+                    return {
+                        id: `parsed-${idx}-${Date.now()}`,
+                        question: q.question,
+                        answer: q.answer,
+                        image: matchedImg || ''
+                    };
+                }));
             } else {
-                setFormQuestions([{ id: `new-1-${Date.now()}`, question: '', answer: '' }]);
+                setFormQuestions([{ id: `new-1-${Date.now()}`, question: '', answer: '', image: '' }]);
             }
         }
         setInputMode(targetMode);
@@ -124,13 +166,14 @@ Answer: C`);
         setFormQuestions([...formQuestions, {
             id: `row-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
             question: '',
-            answer: ''
+            answer: '',
+            image: ''
         }]);
     };
 
     const handleRemoveRow = (id) => {
         if (formQuestions.length <= 1) {
-            alert('Một bộ câu hỏi cần có ít nhất 1 câu hỏi.');
+            showAlert('Một bộ câu hỏi cần có ít nhất 1 câu hỏi.');
             return;
         }
         setFormQuestions(formQuestions.filter(q => q.id !== id));
@@ -146,12 +189,25 @@ Answer: C`);
     };
 
     const handleResetForm = () => {
-        if (window.confirm('Bạn có muốn làm trống toàn bộ dữ liệu đang nhập để viết lại?')) {
+        showConfirm('Bạn có muốn làm trống toàn bộ dữ liệu đang nhập để viết lại?', () => {
             if (inputMode === 'text') {
                 setRawText('');
             } else {
-                setFormQuestions([{ id: `reset-${Date.now()}`, question: '', answer: '' }]);
+                setFormQuestions([{ id: `reset-${Date.now()}`, question: '', answer: '', image: '' }]);
             }
+        });
+    };
+
+
+    const handleQuestionImageChange = async (id, e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const compressed = await compressAndResizeImage(file, 600, 600, 0.7);
+            handleFormRowChange(id, 'image', compressed);
+        } catch (err) {
+            console.error('Lỗi khi nén ảnh câu hỏi:', err);
+            showAlert('Không thể xử lý ảnh này.');
         }
     };
 
@@ -159,26 +215,49 @@ Answer: C`);
         e.preventDefault();
         const titleVal = title.trim();
         if (!titleVal) {
-            alert('Vui lòng nhập tiêu đề bộ câu hỏi.');
+            showAlert('Vui lòng nhập tiêu đề bộ câu hỏi.');
             return;
         }
 
         let questionsArr = [];
         if (inputMode === 'text') {
-            questionsArr = parseRawTextToQuestions(rawText);
+            const parsed = parseRawTextToQuestions(rawText);
+            questionsArr = parsed.map((q, idx) => {
+                // Preserve question images if matching by text or index in current formQuestions state
+                let matchedImg = '';
+                const matchedByText = formQuestions.find(fq => fq.question.trim() === q.question.trim());
+                if (matchedByText) {
+                    matchedImg = matchedByText.image;
+                } else {
+                    const matchedByIndex = formQuestions[idx];
+                    if (matchedByIndex) {
+                        matchedImg = matchedByIndex.image;
+                    }
+                }
+                return {
+                    question: q.question.trim(),
+                    answer: q.answer.trim(),
+                    image: matchedImg || ''
+                };
+            });
         } else {
             questionsArr = formQuestions
                 .filter(q => q.question.trim() && q.answer.trim())
-                .map(q => ({ question: q.question.trim(), answer: q.answer.trim() }));
+                .map(q => ({ 
+                    question: q.question.trim(), 
+                    answer: q.answer.trim(),
+                    image: q.image || ''
+                }));
         }
 
         if (questionsArr.length === 0) {
-            alert('Không tìm thấy câu hỏi hợp lệ. Vui lòng kiểm tra lại cấu trúc nhập liệu.');
+            showAlert('Không tìm thấy câu hỏi hợp lệ. Vui lòng kiểm tra lại cấu trúc nhập liệu.');
             return;
         }
 
         onSave({
             title: titleVal,
+            folder: isNewFolder ? newFolder.trim() : folder,
             questions: questionsArr
         });
     };
@@ -209,6 +288,55 @@ Answer: C`);
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                         />
+                    </div>
+
+                    {/* Folder Selection Row */}
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                        <label className="form-label">Thư mục / Môn học</label>
+                        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column', maxWidth: '400px' }}>
+                            {!isNewFolder ? (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <select 
+                                        className="form-input"
+                                        value={folder}
+                                        onChange={(e) => {
+                                            if (e.target.value === '__new__') {
+                                                setIsNewFolder(true);
+                                            } else {
+                                                setFolder(e.target.value);
+                                            }
+                                        }}
+                                        style={{ flexGrow: 1 }}
+                                    >
+                                        {foldersList.map(f => (
+                                            <option key={f} value={f}>{f}</option>
+                                        ))}
+                                        <option value="__new__">📁 + Tạo thư mục mới...</option>
+                                    </select>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input 
+                                        type="text" 
+                                        className="form-input" 
+                                        placeholder="Tên thư mục mới..."
+                                        value={newFolder}
+                                        onChange={(e) => setNewFolder(e.target.value)}
+                                        style={{ flexGrow: 1 }}
+                                    />
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-outline" 
+                                        onClick={() => {
+                                            setIsNewFolder(false);
+                                            setNewFolder('');
+                                        }}
+                                    >
+                                        Hủy
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="questions-section">
@@ -317,17 +445,44 @@ Answer: B`}</pre>
                                                         onChange={(e) => handleFormRowChange(q.id, 'question', e.target.value)}
                                                     />
                                                 </div>
-                                                <div className="form-group">
-                                                    <label className="form-label">Đáp án đúng <span className="required">*</span></label>
-                                                    <input 
-                                                        type="text" 
-                                                        className="form-input q-ans-input" 
-                                                        placeholder="Ví dụ: C" 
-                                                        required 
-                                                        value={q.answer}
-                                                        onChange={(e) => handleFormRowChange(q.id, 'answer', e.target.value)}
-                                                        autoComplete="off"
-                                                    />
+                                                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                    <div>
+                                                        <label className="form-label">Đáp án đúng <span className="required">*</span></label>
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-input q-ans-input" 
+                                                            placeholder="Ví dụ: C" 
+                                                            required 
+                                                            value={q.answer}
+                                                            onChange={(e) => handleFormRowChange(q.id, 'answer', e.target.value)}
+                                                            autoComplete="off"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="form-label">Hình minh họa (Tùy chọn)</label>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <div className="file-input-wrapper" style={{ position: 'relative', overflow: 'hidden', display: 'inline-block' }}>
+                                                                <button type="button" className="btn btn-sm btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px' }}>
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                                                        <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                                    </svg>
+                                                                    Tải ảnh
+                                                                </button>
+                                                                <input 
+                                                                    type="file" 
+                                                                    accept="image/*" 
+                                                                    onChange={(e) => handleQuestionImageChange(q.id, e)}
+                                                                    style={{ position: 'absolute', left: 0, top: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                                                                />
+                                                            </div>
+                                                            {q.image && (
+                                                                <div className="image-preview-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--primary-soft)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontSize: '12px' }}>
+                                                                    <img src={q.image} alt="Question preview" style={{ width: '24px', height: '24px', borderRadius: '4px', objectFit: 'cover' }} />
+                                                                    <button type="button" onClick={() => handleFormRowChange(q.id, 'image', '')} style={{ border: 'none', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

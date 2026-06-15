@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatDuration, formatDate } from '../utils/quizParser';
 
-export default function StatsView({ attempts, onClearHistory, onViewAttemptDetails }) {
+export default function StatsView({ attempts, onClearHistory, onViewAttemptDetails, showConfirm }) {
     // 1. Calculate stats
     const totalCount = attempts.length;
 
@@ -21,9 +21,9 @@ export default function StatsView({ attempts, onClearHistory, onViewAttemptDetai
     }
 
     const handleClear = () => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử làm bài kiểm tra? Hành động này không thể hoàn tác.')) {
+        showConfirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử làm bài kiểm tra? Hành động này không thể hoàn tác.', () => {
             onClearHistory();
-        }
+        });
     };
 
     return (

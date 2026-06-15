@@ -27,6 +27,7 @@ export default function App() {
     // Theme & Search State
     const [theme, setTheme] = useState('light');
     const [searchQuery, setSearchQuery] = useState('');
+    const [modalConfig, setModalConfig] = useState(null); // { type, message, title, onOk, onCancel }
 
     // --- 2. Load Initial Data ---
     useEffect(() => {
@@ -76,23 +77,52 @@ export default function App() {
         localStorage.setItem('eduquiz_theme', newTheme);
     };
 
+    // --- 4.5 Custom modal helper triggers ---
+    const showAlert = (message, title = 'Thông báo', onOk = null) => {
+        setModalConfig({
+            type: 'alert',
+            title,
+            message,
+            onOk: () => {
+                setModalConfig(null);
+                if (onOk) onOk();
+            }
+        });
+    };
+
+    const showConfirm = (message, onConfirm, onCancel = null, title = 'Xác nhận') => {
+        setModalConfig({
+            type: 'confirm',
+            title,
+            message,
+            onOk: () => {
+                setModalConfig(null);
+                if (onConfirm) onConfirm();
+            },
+            onCancel: () => {
+                setModalConfig(null);
+                if (onCancel) onCancel();
+            }
+        });
+    };
+
     // --- 5. Navigation & Warnings ---
     const handleViewChange = (targetView) => {
         if (currentView === 'view-test') {
-            if (window.confirm('Tiến trình làm bài kiểm tra hiện tại sẽ bị mất. Bạn vẫn muốn thoát chứ?')) {
+            showConfirm('Tiến trình làm bài kiểm tra hiện tại sẽ bị mất. Bạn vẫn muốn thoát chứ?', () => {
                 setCurrentView(targetView);
-            }
+            });
         } else if (currentView === 'view-flashcard') {
-            if (window.confirm('Phiên học Flashcard hiện tại sẽ bị dừng. Bạn vẫn muốn thoát chứ?')) {
+            showConfirm('Phiên học Flashcard hiện tại sẽ bị dừng. Bạn vẫn muốn thoát chứ?', () => {
                 setCurrentView(targetView);
-            }
+            });
         } else {
             setCurrentView(targetView);
         }
     };
 
     // --- 6. Quiz Set Operations ---
-    const handleSaveQuizSet = ({ title, questions }) => {
+    const handleSaveQuizSet = ({ title, folder, questions }) => {
         let updatedSets = [...quizSets];
         if (editingQuizId) {
             updatedSets = quizSets.map(set => {
@@ -100,6 +130,7 @@ export default function App() {
                     return {
                         ...set,
                         title,
+                        folder: folder || 'Chưa phân loại',
                         questions
                     };
                 }
@@ -109,6 +140,7 @@ export default function App() {
             const newQuiz = {
                 id: 'quiz-' + Date.now(),
                 title,
+                folder: folder || 'Chưa phân loại',
                 questions,
                 createdAt: new Date().toISOString()
             };
@@ -129,10 +161,10 @@ export default function App() {
         const set = quizSets.find(s => s.id === quizId);
         if (!set) return;
 
-        if (window.confirm(`Bạn có chắc chắn muốn xóa bộ câu hỏi "${set.title}" không?`)) {
+        showConfirm(`Bạn có chắc chắn muốn xóa bộ câu hỏi "${set.title}" không?`, () => {
             const updated = quizSets.filter(s => s.id !== quizId);
             saveQuizSets(updated);
-        }
+        });
     };
 
     // --- 7. Play modes triggers ---
@@ -220,9 +252,12 @@ export default function App() {
 
                     {currentView === 'view-manage-quiz' && (
                         <ManageQuizView 
+                            quizSets={quizSets}
                             editingQuizSet={quizSets.find(s => s.id === editingQuizId)}
                             onSave={handleSaveQuizSet}
                             onCancel={() => setCurrentView('view-dashboard')}
+                            showAlert={showAlert}
+                            showConfirm={showConfirm}
                         />
                     )}
 
@@ -230,6 +265,7 @@ export default function App() {
                         <PracticeView 
                             quizSet={activeQuizSet}
                             onExit={() => setCurrentView('view-dashboard')}
+                            showAlert={showAlert}
                         />
                     )}
 
@@ -239,6 +275,8 @@ export default function App() {
                             config={activeTestConfig}
                             onCancel={() => setCurrentView('view-dashboard')}
                             onSubmit={handleTestSubmit}
+                            showAlert={showAlert}
+                            showConfirm={showConfirm}
                         />
                     )}
 
@@ -256,6 +294,7 @@ export default function App() {
                             attempts={attempts}
                             onClearHistory={handleClearHistory}
                             onViewAttemptDetails={handleViewAttemptDetails}
+                            showConfirm={showConfirm}
                         />
                     )}
 
@@ -275,6 +314,39 @@ export default function App() {
                 onCancel={() => setIsTestSetupOpen(false)}
                 onStart={handleStartTestConfirm}
             />
+
+            {/* Custom Alert & Confirm Modal Overlay */}
+            {modalConfig && (
+                <div className="custom-modal-overlay">
+                    <div className="custom-modal-card">
+                        <div className="custom-modal-header">
+                            <div className={`custom-modal-icon ${modalConfig.type}`}>
+                                {modalConfig.type === 'alert' ? (
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="20" height="20">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="16" x2="12" y2="12" />
+                                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                                    </svg>
+                                ) : (
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="20" height="20">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                                    </svg>
+                                )}
+                            </div>
+                            <h3 className="custom-modal-title">{modalConfig.title}</h3>
+                        </div>
+                        <div className="custom-modal-body">{modalConfig.message}</div>
+                        <div className="custom-modal-footer">
+                            {modalConfig.type === 'confirm' && (
+                                <button type="button" className="btn btn-outline" onClick={modalConfig.onCancel}>Hủy</button>
+                            )}
+                            <button type="button" className="btn btn-primary" onClick={modalConfig.onOk}>Xác nhận</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
