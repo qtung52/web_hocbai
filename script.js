@@ -1,3 +1,4 @@
+
 /**
  * ==========================================================================
  * EDUQUIZ HUB - MAIN JAVASCRIPT APPLICATION CODE
@@ -7,19 +8,19 @@
 
 // Đợi DOM load hoàn tất trước khi chạy
 document.addEventListener('DOMContentLoaded', () => {
-    
+
     // --- 1. BIẾN TRẠNG THÁI TOÀN CỤC (APPLICATION STATE) ---
     let quizSets = [];
     let attempts = [];
-    
+
     let currentActiveView = 'view-dashboard';
     let activeQuizSet = null;
     let practiceIndex = 0;
-    
+
     // Quản lý thời gian bài kiểm tra
     let testTimerInterval = null;
     let testSeconds = 0;
-    
+
     // Quản lý trạng thái sửa bộ câu hỏi
     let editingQuizId = null;
 
@@ -34,18 +35,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- 2. TRUY XUẤT PHẦN TỬ DOM (DOM ELEMENTS) ---
-    
+
     // Sidebar & Navigation
     const navItems = document.querySelectorAll('.nav-item');
     const navCreateQuizBtn = document.getElementById('nav-create-quiz');
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     const currentDatetimeEl = document.getElementById('current-datetime');
-    
+
     // Views
     const views = document.querySelectorAll('.app-view');
     const searchBarContainer = document.getElementById('search-bar-container');
     const searchQuizInput = document.getElementById('search-quiz-input');
-    
+
     // View 1: Dashboard Elements
     const statsTotalSets = document.getElementById('stats-total-sets');
     const statsTotalAttempts = document.getElementById('stats-total-attempts');
@@ -56,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const quizSetsGrid = document.getElementById('quiz-sets-grid');
     const btnQuickCreate = document.getElementById('btn-quick-create');
     const btnEmptyCreate = document.getElementById('btn-empty-create');
-    
+
     // View 2: Manage Quiz Elements
     const manageTitle = document.getElementById('manage-title');
     const quizManageForm = document.getElementById('quiz-manage-form');
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const quizQuestionsRaw = document.getElementById('quiz-questions-raw');
     const btnResetForm = document.getElementById('btn-reset-form');
     const btnCancelManage = document.getElementById('btn-cancel-manage');
-    
+
     // Tab Elements
     const tabModeText = document.getElementById('tab-mode-text');
     const tabModeForm = document.getElementById('tab-mode-form');
@@ -74,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const manageModeFormContainer = document.getElementById('manage-mode-form-container');
     const questionsListContainer = document.getElementById('questions-list-container');
     const btnAddQuestionRow = document.getElementById('btn-add-question-row');
-    
+
     // View 3: Practice Elements
     const practiceSetTitle = document.getElementById('practice-set-title');
     const practiceSidebarTitle = document.getElementById('practice-sidebar-title');
@@ -93,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPracticeCheck = document.getElementById('btn-practice-check');
     const btnPracticeNext = document.getElementById('btn-practice-next');
     const btnExitPractice = document.getElementById('btn-exit-practice');
-    
+
     // View 4: Test Elements
     const testSetTitle = document.getElementById('test-set-title');
     const testQuestionsList = document.getElementById('test-questions-list');
@@ -103,13 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const testNavGrid = document.getElementById('test-nav-grid');
     const testSubmissionForm = document.getElementById('test-submission-form');
     const btnExitTest = document.getElementById('btn-exit-test');
-    
+
     // View 7: Flashcard Elements
     const viewFlashcard = document.getElementById('view-flashcard');
     const flashcardSetTitle = document.getElementById('flashcard-set-title');
     const btnExitFlashcard = document.getElementById('btn-exit-flashcard');
     const flashcardActiveWorkspace = document.getElementById('flashcard-active-workspace');
-    
+
     // Tracker / Progress
     const flashcardDeckCount = document.getElementById('flashcard-deck-count');
     const fcBadgeHard = document.getElementById('fc-badge-hard');
@@ -118,14 +119,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const fcProgressEasy = document.getElementById('fc-progress-easy');
     const fcProgressMedium = document.getElementById('fc-progress-medium');
     const fcProgressHard = document.getElementById('fc-progress-hard');
-    
+
     // 3D Card Area
     const flashcardClickArea = document.getElementById('flashcard-click-area');
     const flashcardCard3d = document.getElementById('flashcard-card-3d');
     const fcQuestionText = document.getElementById('fc-question-text');
     const fcAnswerText = document.getElementById('fc-answer-text');
     const fcOptionsList = document.getElementById('fc-options-list');
-    
+
     // Controls
     const fcControlFront = document.getElementById('fc-control-front');
     const btnFcFlip = document.getElementById('btn-fc-flip');
@@ -133,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnFcHard = document.getElementById('btn-fc-hard');
     const btnFcMedium = document.getElementById('btn-fc-medium');
     const btnFcEasy = document.getElementById('btn-fc-easy');
-    
+
     // Complete Screen
     const flashcardCompletePanel = document.getElementById('flashcard-complete-panel');
     const fcConfettiCanvas = document.getElementById('fc-confetti-canvas');
@@ -142,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fcTotalTime = document.getElementById('fc-total-time');
     const btnFcRestart = document.getElementById('btn-fc-restart');
     const btnFcHome = document.getElementById('btn-fc-home');
-    
+
     // View 5: Results Elements
     const resultsQuizTitle = document.getElementById('results-quiz-title');
     const resultProgressRing = document.getElementById('result-progress-ring');
@@ -156,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnResultsHome = document.getElementById('btn-results-home');
     const btnResultsRetry = document.getElementById('btn-results-retry');
     const btnResultsPractice = document.getElementById('btn-results-practice');
-    
+
     // View 6: Stats View Elements
     const btnClearHistory = document.getElementById('btn-clear-history');
     const historyTotalCount = document.getElementById('history-total-count');
@@ -167,19 +168,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const emptyHistoryState = document.getElementById('empty-history-state');
     const historyTableContainer = document.getElementById('history-table-container');
     const historyTableBody = document.getElementById('history-table-body');
-    
+
     // Confirm Modal Elements
     const confirmModal = document.getElementById('confirm-modal');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
     const modalBtnCancel = document.getElementById('modal-btn-cancel');
     const modalBtnConfirm = document.getElementById('modal-btn-confirm');
-    
+
     // Trạng thái cho callback modal
     let confirmModalCallback = null;
 
     // --- 3. ĐỊNH DẠNG VÀ TIỆN ÍCH THỜI GIAN ---
-    
+
     // Cập nhật ngày giờ ở Header
     function updateDateTime() {
         const now = new Date();
@@ -203,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 4. HỆ THỐNG XÁC NHẬN (CONFIRM MODAL) ---
-    
+
     function showConfirmModal(title, text, onConfirm) {
         modalTitle.textContent = title;
         modalBody.textContent = text;
@@ -225,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 5. THEME SWITCHER (GIAO DIỆN SÁNG/TỐI) ---
-    
+
     function initTheme() {
         const savedTheme = localStorage.getItem('eduquiz_theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
@@ -234,13 +235,13 @@ document.addEventListener('DOMContentLoaded', () => {
     themeToggleBtn.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
+
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('eduquiz_theme', newTheme);
     });
 
     // --- 6. KHỞI TẠO VÀ LƯU TRỮ LOCALSTORAGE ---
-    
+
     function loadData() {
         // Tải Quiz Sets
         const storedSets = localStorage.getItem('eduquiz_sets');
@@ -272,11 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 7. ROUTING GIỮA CÁC PHÂN HỆ (SPA ROUTER) ---
-    
+
     function showView(viewId) {
         // Ẩn tất cả view
         views.forEach(v => v.classList.remove('active'));
-        
+
         // Hiện view mong muốn
         const targetView = document.getElementById(viewId);
         if (targetView) {
@@ -326,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const target = item.getAttribute('data-target');
-            
+
             // Nếu đang trong chế độ làm kiểm tra, cảnh báo trước khi thoát
             if (currentActiveView === 'view-test') {
                 showConfirmModal(
@@ -353,11 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 8. THỐNG KÊ DASHBOARD (STATISTICS) ---
-    
+
     function calculateStats() {
         // 1. Số lượng bộ câu hỏi
         statsTotalSets.textContent = quizSets.length;
-        
+
         // 2. Tổng số lượt làm bài
         statsTotalAttempts.textContent = attempts.length;
 
@@ -378,10 +379,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 9. HIỂN THỊ DANH SÁCH BỘ CÂU HỎI & TÌM KIẾM ---
-    
+
     function renderQuizGrid(filterText = '') {
         quizSetsGrid.innerHTML = '';
-        const filtered = quizSets.filter(set => 
+        const filtered = quizSets.filter(set =>
             set.title.toLowerCase().includes(filterText.toLowerCase())
         );
 
@@ -509,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i];
                 const answerMatch = line.match(/^(?:Answer|Đáp án|Đáp án đúng|Ans)\s*:\s*(.+)/i);
-                
+
                 if (answerMatch) {
                     answer = answerMatch[1].trim();
                     continue;
@@ -658,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (questions.length > 0) {
                 quizQuestionsRaw.value = formatQuestionsToRawText(questions);
             }
-            
+
             manageModeTextContainer.style.display = 'block';
             manageModeFormContainer.style.display = 'none';
             tabModeText.classList.add('active');
@@ -667,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tabModeForm.classList.add('btn-outline');
             tabModeForm.style.color = 'var(--text-muted)';
             tabModeText.style.color = 'var(--text-on-primary)';
-            
+
             manageQuestionsCount.textContent = 'Chế độ văn bản';
         } else {
             // Chuyển từ Textarea sang Form
@@ -691,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tabModeText.classList.add('btn-outline');
             tabModeText.style.color = 'var(--text-muted)';
             tabModeForm.style.color = 'var(--text-on-primary)';
-            
+
             updateFormQuestionsCount();
         }
 
@@ -705,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function initManageForm(quizId = null) {
         quizQuestionsRaw.value = '';
         questionsListContainer.innerHTML = '';
-        
+
         // Mặc định về tab văn bản
         activeInputMode = 'text';
         manageModeTextContainer.style.display = 'block';
@@ -724,14 +725,14 @@ document.addEventListener('DOMContentLoaded', () => {
             manageTitle.textContent = "Chỉnh Sửa Bộ Câu Hỏi";
             manageQuizIdInput.value = set.id;
             quizTitleInput.value = set.title;
-            
+
             quizQuestionsRaw.value = formatQuestionsToRawText(set.questions);
         } else {
             editingQuizId = null;
             manageTitle.textContent = "Tạo Bộ Câu Hỏi Mới";
             manageQuizIdInput.value = "";
             quizTitleInput.value = "";
-            
+
             quizQuestionsRaw.value = `câu 1: Đây là câu hỏi ví dụ thứ nhất?
 A. Lựa chọn 1
 B. Lựa chọn 2
@@ -805,7 +806,7 @@ Answer: C`;
 
         saveQuizSets();
         showView('view-dashboard');
-        
+
         const actionText = editingQuizId ? "Cập nhật" : "Tạo mới";
         alert(`${actionText} bộ câu hỏi "${titleVal}" thành công với ${questionsArr.length} câu hỏi!`);
         editingQuizId = null;
@@ -828,7 +829,7 @@ Answer: C`;
             () => {
                 quizSets = quizSets.filter(s => s.id !== quizId);
                 saveQuizSets();
-                
+
                 attempts = attempts.filter(a => a.quizId !== quizId);
                 saveAttempts();
 
@@ -839,7 +840,7 @@ Answer: C`;
     }
 
     // --- 11. CHẾ ĐỘ LUYỆN TẬP (PRACTICE MODE - NGẪU NHIÊN TỐI ĐA 20 CÂU & TRẮC NGHIỆM ĐA LỰA CHỌN) ---
-    
+
     function startPractice(quizId) {
         const set = quizSets.find(s => s.id === quizId);
         if (!set || set.questions.length === 0) {
@@ -856,20 +857,20 @@ Answer: C`;
             title: set.title,
             questions: sliced
         };
-        
+
         practiceIndex = 0;
-        
+
         practiceSetTitle.textContent = "Chế độ: Luyện Tập (Ngẫu nhiên 20 câu)";
         practiceSidebarTitle.textContent = set.title;
         practiceSidebarCount.textContent = `${sliced.length} / ${set.questions.length} câu ngẫu nhiên`;
-        
+
         showView('view-practice');
         renderPracticeQuestion();
     }
 
     function renderPracticeQuestion() {
         const q = activeQuizSet.questions[practiceIndex];
-        
+
         // Tiến trình
         const total = activeQuizSet.questions.length;
         const currentNum = practiceIndex + 1;
@@ -882,7 +883,7 @@ Answer: C`;
         // Reset Inputs & Feedback
         practiceAnswerInput.value = '';
         practiceFeedbackAlert.style.display = 'none';
-        
+
         // Cấu hình lại nút
         btnPracticeCheck.style.display = 'block';
         btnPracticeNext.style.display = 'none';
@@ -936,18 +937,18 @@ Answer: C`;
         const isCorrect = userAns.toLowerCase() === q.answer.toLowerCase();
 
         btnPracticeCheck.style.display = 'none';
-        
+
         // Vô hiệu hóa lựa chọn sau khi check
         if (practiceChoicesContainer.style.display !== 'none') {
             practiceChoicesContainer.querySelectorAll('.choice-btn').forEach(btn => {
                 btn.disabled = true;
                 const letter = btn.getAttribute('data-letter');
-                
+
                 // Tô màu xanh cho đáp án đúng hệ thống
                 if (letter.toLowerCase() === q.answer.toLowerCase()) {
                     btn.classList.add('correct');
                 }
-                
+
                 // Tô màu đỏ nếu người dùng chọn sai
                 if (letter.toLowerCase() === userAns.toLowerCase() && !isCorrect) {
                     btn.classList.add('incorrect');
@@ -959,7 +960,7 @@ Answer: C`;
 
         // Cập nhật alert phản hồi
         practiceFeedbackAlert.className = `feedback-alert ${isCorrect ? 'correct' : 'incorrect'}`;
-        
+
         if (isCorrect) {
             practiceFeedbackIcon.innerHTML = `
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -1013,7 +1014,7 @@ Answer: C`;
     });
 
     // --- 12. CHẾ ĐỘ KIỂM TRA (TEST MODE - NGẪU NHIÊN TỐI ĐA 20 CÂU & TRẮC NGHIỆM ĐA LỰA CHỌN) ---
-    
+
     function startTest(quizId) {
         const set = quizSets.find(s => s.id === quizId);
         if (!set || set.questions.length === 0) {
@@ -1030,10 +1031,10 @@ Answer: C`;
             title: set.title,
             questions: sliced
         };
-        
+
         testSeconds = 0;
         testTimer.textContent = "00:00";
-        
+
         testSetTitle.textContent = `Bài thi ngẫu nhiên: ${set.title}`;
         testTotalCount.textContent = sliced.length;
         testAnsweredCount.textContent = "0";
@@ -1116,7 +1117,7 @@ Answer: C`;
                         card.querySelectorAll('.test-choice-item').forEach(lbl => lbl.classList.remove('selected'));
                         const selectedLabel = card.querySelector(`#test-choice-item-${idx}-${radio.value}`);
                         if (selectedLabel) selectedLabel.classList.add('selected');
-                        
+
                         updateTestProgressFeedback();
                     });
                 });
@@ -1133,7 +1134,7 @@ Answer: C`;
             navBadge.className = 'nav-badge';
             navBadge.id = `test-nav-badge-${idx}`;
             navBadge.textContent = idx + 1;
-            
+
             navBadge.addEventListener('click', (e) => {
                 e.preventDefault();
                 document.getElementById(`test-q-card-${idx}`).scrollIntoView({
@@ -1233,7 +1234,7 @@ Answer: C`;
 
         activeQuizSet.questions.forEach((q, idx) => {
             let userAns = '';
-            
+
             const radioChecked = testQuestionsList.querySelector(`input[name="test-ans-${idx}"]:checked`);
             if (radioChecked) {
                 userAns = radioChecked.value;
@@ -1274,7 +1275,7 @@ Answer: C`;
     }
 
     // --- 13. MÀN HIỂN THỊ KẾT QUẢ THI (RESULTS VIEW) ---
-    
+
     function renderResults(attempt) {
         resultsQuizTitle.textContent = attempt.quizTitle;
         resultFraction.textContent = `${attempt.score} / ${attempt.total} câu đúng`;
@@ -1301,7 +1302,7 @@ Answer: C`;
         }
 
         resultsReviewContainer.innerHTML = '';
-        
+
         // Sử dụng danh sách câu hỏi đã được lưu theo lượt làm (attempt.questions)
         const questionsList = attempt.questions || [];
 
@@ -1349,7 +1350,7 @@ Answer: C`;
     }
 
     // --- 14. TRANG LỊCH SỬ CHI TIẾT (STATS & HISTORY) ---
-    
+
     function renderStatsHistory() {
         historyTotalCount.textContent = `${attempts.length} lần`;
 
@@ -1377,12 +1378,12 @@ Answer: C`;
         historyAvgTime.textContent = formatTime(Math.round(sumTime / attempts.length));
 
         historyTableBody.innerHTML = '';
-        
+
         const sortedAttempts = [...attempts].reverse();
 
         sortedAttempts.forEach(item => {
             const tr = document.createElement('tr');
-            
+
             tr.innerHTML = `
                 <td><strong>${escapeHTML(item.quizTitle)}</strong></td>
                 <td><span>${formatDate(item.date)}</span></td>
@@ -1437,7 +1438,7 @@ Answer: C`;
     });
 
     // --- 14b. CHẾ ĐỘ THẺ GHI NHỚ 3D (3D FLASHCARDS SYSTEM) ---
-    
+
     // Bắt đầu học Flashcard
     function startFlashcards(quizId) {
         const set = quizSets.find(s => s.id === quizId);
@@ -1448,7 +1449,7 @@ Answer: C`;
 
         // Tạo bộ thẻ ghi nhớ xáo trộn từ bộ câu hỏi
         const shuffled = shuffleArray(set.questions);
-        
+
         // Cấu trúc của mỗi thẻ đang học: { question, answer, id, recallLevel, easyFirstTry }
         flashcardDeck = shuffled.map((q, idx) => ({
             question: q.question,
@@ -1461,7 +1462,7 @@ Answer: C`;
         flashcardIndex = 0;
         flashcardEasyOriginalCount = 0;
         isFlashcardFlipped = false;
-        
+
         // Quản lý thời gian học
         flashcardSeconds = 0;
         stopFlashcardTimer();
@@ -1471,10 +1472,10 @@ Answer: C`;
         flashcardSetTitle.textContent = `Thẻ ghi nhớ: ${set.title}`;
         flashcardActiveWorkspace.style.display = 'grid';
         flashcardCompletePanel.style.display = 'none';
-        
+
         // Reset lật thẻ ban đầu trên giao diện
         flashcardCard3d.classList.remove('flipped');
-        
+
         showView('view-flashcard');
         renderFlashcard();
     }
@@ -1495,7 +1496,7 @@ Answer: C`;
     // Lật thẻ (xoay 180 độ)
     function flipFlashcard() {
         if (flashcardDeck.length === 0) return;
-        
+
         isFlashcardFlipped = !isFlashcardFlipped;
         if (isFlashcardFlipped) {
             flashcardCard3d.classList.add('flipped');
@@ -1527,7 +1528,7 @@ Answer: C`;
         // Tách câu hỏi và phương án nếu có trắc nghiệm
         const parsed = extractQuestionAndOptions(currentCard.question);
         fcQuestionText.textContent = parsed.description;
-        
+
         // Hiển thị đáp án đúng
         fcAnswerText.textContent = currentCard.answer;
 
@@ -1535,12 +1536,12 @@ Answer: C`;
         if (parsed.options.length > 0) {
             fcOptionsList.innerHTML = '';
             fcOptionsList.style.display = 'flex';
-            
+
             parsed.options.forEach(opt => {
                 const optEl = document.createElement('div');
                 optEl.className = 'fc-option-card';
                 optEl.innerHTML = `<strong>${opt.letter}.</strong>&nbsp;${escapeHTML(opt.text)}`;
-                
+
                 // Tô viền xanh cho lựa chọn đúng
                 if (opt.letter.toLowerCase() === currentCard.answer.toLowerCase()) {
                     optEl.classList.add('correct');
@@ -1564,14 +1565,14 @@ Answer: C`;
         const hard = flashcardDeck.filter(c => c.recallLevel === 'hard').length;
         const medium = flashcardDeck.filter(c => c.recallLevel === 'medium').length;
         const newCards = flashcardDeck.filter(c => c.recallLevel === 'new').length;
-        
+
         fcBadgeHard.textContent = `Chưa nhớ: ${hard}`;
         fcBadgeMedium.textContent = `Đang học: ${medium}`;
         fcBadgeEasy.textContent = `Đã thuộc: ${flashcardEasyOriginalCount}`;
 
         // Tính tỷ lệ phần trăm tiến trình
         const totalSessionCards = remainingCount + flashcardEasyOriginalCount;
-        
+
         if (totalSessionCards > 0) {
             const easyPercent = (flashcardEasyOriginalCount / totalSessionCards) * 100;
             const mediumPercent = (medium / totalSessionCards) * 100;
@@ -1592,45 +1593,45 @@ Answer: C`;
         if (flashcardDeck.length === 0) return;
 
         const currentCard = flashcardDeck[flashcardIndex];
-        
+
         if (level === 'easy') {
             // Đã thuộc bài -> Loại bỏ hoàn toàn khỏi hàng chờ
             currentCard.recallLevel = 'easy';
             if (currentCard.easyFirstTry) {
                 flashcardEasyOriginalCount++;
             }
-            
+
             // Xóa thẻ khỏi mảng
             flashcardDeck.splice(flashcardIndex, 1);
-            
+
             playChime(600, 0.08); // Âm thanh phản hồi tích cực
         } else if (level === 'medium') {
             // Mơ hồ -> Cho thẻ xuất hiện lại ở vị trí giữa hàng chờ (hoặc sau 2-3 thẻ tiếp theo)
             currentCard.recallLevel = 'medium';
             currentCard.easyFirstTry = false;
-            
+
             // Xóa thẻ ở vị trí hiện tại
             flashcardDeck.splice(flashcardIndex, 1);
-            
+
             // Chèn lại vào giữa danh sách (nhưng tối thiểu là sau 2 thẻ kế tiếp nếu danh sách đủ dài)
             const insertPos = Math.min(
                 Math.max(2, Math.floor(flashcardDeck.length / 2)),
                 flashcardDeck.length
             );
             flashcardDeck.splice(insertPos, 0, currentCard);
-            
+
             playChime(350, 0.08);
         } else if (level === 'hard') {
             // Chưa thuộc bài -> Đưa thẻ xuống cuối hàng chờ học lại nhiều lần
             currentCard.recallLevel = 'hard';
             currentCard.easyFirstTry = false;
-            
+
             // Xóa thẻ ở vị trí hiện tại
             flashcardDeck.splice(flashcardIndex, 1);
-            
+
             // Đưa xuống cuối danh sách
             flashcardDeck.push(currentCard);
-            
+
             playChime(250, 0.12);
         }
 
@@ -1641,7 +1642,7 @@ Answer: C`;
     // Hoàn thành phiên học (Confetti và Audio Victory)
     function finishFlashcardSession() {
         stopFlashcardTimer();
-        
+
         flashcardActiveWorkspace.style.display = 'none';
         flashcardCompletePanel.style.display = 'block';
 
@@ -1653,7 +1654,7 @@ Answer: C`;
 
         // Chạy âm thanh chiến thắng
         playVictorySound();
-        
+
         // Kích hoạt pháo hoa confetti
         triggerConfetti(fcConfettiCanvas);
     }
@@ -1675,16 +1676,16 @@ Answer: C`;
             }
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            
+
             osc.connect(gain);
             gain.connect(ctx.destination);
-            
+
             osc.type = 'sine';
             osc.frequency.value = frequency;
-            
+
             gain.gain.setValueAtTime(0.1, ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-            
+
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + duration);
         } catch (e) {
@@ -1696,7 +1697,7 @@ Answer: C`;
         try {
             const ctx = getAudioContext();
             if (ctx.state === 'suspended') ctx.resume();
-            
+
             const now = ctx.currentTime;
             const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (Hợp âm đô trưởng đi lên)
             notes.forEach((freq, idx) => {
@@ -1704,13 +1705,13 @@ Answer: C`;
                 const gain = ctx.createGain();
                 osc.connect(gain);
                 gain.connect(ctx.destination);
-                
+
                 osc.frequency.value = freq;
                 osc.type = 'triangle';
-                
+
                 gain.gain.setValueAtTime(0.08, now + idx * 0.12);
                 gain.gain.exponentialRampToValueAtTime(0.005, now + idx * 0.12 + 0.3);
-                
+
                 osc.start(now + idx * 0.12);
                 osc.stop(now + idx * 0.12 + 0.3);
             });
@@ -1749,7 +1750,7 @@ Answer: C`;
 
         function draw() {
             ctx.clearRect(0, 0, width, height);
-            
+
             let activeParticles = 0;
 
             particles.forEach(p => {
@@ -1783,9 +1784,9 @@ Answer: C`;
     // Hỗ trợ phím tắt khi đang học Flashcard
     document.addEventListener('keydown', (e) => {
         if (currentActiveView !== 'view-flashcard') return;
-        
+
         // Tránh kích hoạt phím tắt khi đang nhập liệu hoặc modal hiện lên
-        if (document.activeElement.tagName === 'INPUT' || 
+        if (document.activeElement.tagName === 'INPUT' ||
             document.activeElement.tagName === 'TEXTAREA' ||
             confirmModal.classList.contains('active')) {
             return;
@@ -1806,7 +1807,7 @@ Answer: C`;
     });
 
     // --- 15. CÁC HÀM TIỆN ÍCH KHÁC ---
-    
+
     function escapeHTML(str) {
         if (!str) return '';
         return str
@@ -1831,17 +1832,17 @@ Answer: C`;
 
     flashcardClickArea.addEventListener('click', flipFlashcard);
     btnFcFlip.addEventListener('click', flipFlashcard);
-    
+
     btnFcHard.addEventListener('click', () => rateRecall('hard'));
     btnFcMedium.addEventListener('click', () => rateRecall('medium'));
     btnFcEasy.addEventListener('click', () => rateRecall('easy'));
-    
+
     btnFcRestart.addEventListener('click', () => {
         if (activeQuizSet) {
             startFlashcards(activeQuizSet.id);
         }
     });
-    
+
     btnFcHome.addEventListener('click', () => {
         showView('view-dashboard');
     });
