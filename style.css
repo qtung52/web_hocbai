@@ -38,6 +38,7 @@
     --warning-s: 92%;
     --warning-l: 50%;
     --warning: hsl(var(--warning-h), var(--warning-s), var(--warning-l));
+    --warning-hover: hsl(var(--warning-h), var(--warning-s), calc(var(--warning-l) - 8%));
     --warning-soft: hsl(var(--warning-h), var(--warning-s), 95%);
 
     --info-h: 200;
@@ -491,6 +492,15 @@ html[data-theme="dark"] .toggle-circle {
 
 .btn-success:hover {
     background-color: var(--success-hover);
+}
+
+.btn-warning {
+    background-color: var(--warning);
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: var(--warning-hover);
 }
 
 .btn-danger {
