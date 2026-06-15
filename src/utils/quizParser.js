@@ -10,8 +10,8 @@ export function extractQuestionAndOptions(fullText) {
 
     lines.forEach(line => {
         const trimmed = line.trim();
-        if (/^[A-D]\s*[\.\-\)]\s*/i.test(trimmed)) {
-            const match = trimmed.match(/^([A-D])\s*[\.\-\)]\s*(.*)/i);
+        if (/^[A-Z]\s*[\.\-\)]\s*/i.test(trimmed)) {
+            const match = trimmed.match(/^([A-Z])\s*[\.\-\)]\s*(.*)/i);
             if (match) {
                 options.push({
                     letter: match[1].toUpperCase(),
@@ -30,6 +30,38 @@ export function extractQuestionAndOptions(fullText) {
         description: questionDesc,
         options: options
     };
+}
+
+export function parseCorrectAnswers(answerStr, options) {
+    if (!answerStr) return [];
+    const optionLetters = (options || []).map(o => o.letter.toUpperCase());
+    if (optionLetters.length === 0) return [answerStr.trim().toUpperCase()];
+
+    const cleanStr = answerStr.toUpperCase()
+        .replace(/^(ĐÁP ÁN ĐÚNG|ĐÁP ÁN|DAP AN DUNG|DAP AN|ANSWER|ANS|TRẢ LỜI|TRA LOI|LÀ|LA)\s*[:\-]?\s*/g, '')
+        .trim();
+
+    // Split by common delimiters
+    const tokens = cleanStr.split(/[\s,;\/\+\-\&|]+/);
+    let matches = [];
+
+    tokens.forEach(token => {
+        const trimmedToken = token.trim();
+        if (optionLetters.includes(trimmedToken)) {
+            matches.push(trimmedToken);
+        } else if (trimmedToken.length > 1) {
+            // Check if it's a concatenation of option letters (e.g. "AB", "ABC")
+            const chars = trimmedToken.split('');
+            const allAreOptions = chars.every(c => optionLetters.includes(c));
+            if (allAreOptions) {
+                matches.push(...chars);
+            }
+        }
+    });
+
+    // Remove duplicates and sort
+    const uniqueMatches = Array.from(new Set(matches)).sort();
+    return uniqueMatches.length > 0 ? uniqueMatches : [answerStr.trim().toUpperCase()];
 }
 
 export function shuffleArray(array) {

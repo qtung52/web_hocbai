@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { extractQuestionAndOptions, shuffleArray } from '../utils/quizParser';
+import { extractQuestionAndOptions, shuffleArray, parseCorrectAnswers } from '../utils/quizParser';
 
 export default function PracticeView({ quizSet, onExit, showAlert }) {
     const [shuffledQuestions, setShuffledQuestions] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [selectedOption, setSelectedOption] = useState('');
+    const [selectedOptions, setSelectedOptions] = useState([]);
     const [textAnswer, setTextAnswer] = useState('');
     const [isChecked, setIsChecked] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
@@ -19,7 +19,7 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
     }, [quizSet]);
 
     const resetQuestionState = () => {
-        setSelectedOption('');
+        setSelectedOptions([]);
         setTextAnswer('');
         setIsChecked(false);
         setIsCorrect(false);
@@ -32,22 +32,40 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
     const progressPercent = Math.round(((currentIndex + 1) / totalQuestions) * 100);
 
     const parsed = extractQuestionAndOptions(currentQuestion.question);
-    const correctAnswer = currentQuestion.answer.trim();
+    const correctAnswers = parseCorrectAnswers(currentQuestion.answer, parsed.options);
+    const isMultiple = correctAnswers.length > 1;
 
     const handleOptionSelect = (letter) => {
         if (isChecked) return;
-        setSelectedOption(letter);
+        if (isMultiple) {
+            setSelectedOptions(prev => {
+                const newOpts = prev.includes(letter)
+                    ? prev.filter(l => l !== letter)
+                    : [...prev, letter];
+                return newOpts.sort();
+            });
+        } else {
+            setSelectedOptions([letter]);
+        }
     };
 
     const handleCheckAnswer = () => {
-        const userAnswer = parsed.options.length > 0 ? selectedOption : textAnswer;
-        if (!userAnswer.trim()) {
-            showAlert('Vui lòng nhập hoặc chọn câu trả lời trước khi kiểm tra.');
-            return;
+        if (parsed.options.length > 0) {
+            if (selectedOptions.length === 0) {
+                showAlert('Vui lòng chọn ít nhất một đáp án trước khi kiểm tra.');
+                return;
+            }
+            const correct = selectedOptions.length === correctAnswers.length &&
+                            selectedOptions.every(l => correctAnswers.includes(l));
+            setIsCorrect(correct);
+        } else {
+            if (!textAnswer.trim()) {
+                showAlert('Vui lòng nhập câu trả lời trước khi kiểm tra.');
+                return;
+            }
+            const correct = textAnswer.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
+            setIsCorrect(correct);
         }
-
-        const correct = userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase();
-        setIsCorrect(correct);
         setIsChecked(true);
     };
 
@@ -60,10 +78,15 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
         }
     };
 
-    // Helper to find matching option text
-    const getOptionText = (letter) => {
-        const opt = parsed.options.find(o => o.letter.toLowerCase() === letter.toLowerCase());
-        return opt ? `${opt.letter}. ${opt.text}` : letter;
+    // Helper to find matching options text
+    const getCorrectAnswersText = () => {
+        if (parsed.options.length > 0) {
+            return correctAnswers.map(letter => {
+                const opt = parsed.options.find(o => o.letter.toUpperCase() === letter.toUpperCase());
+                return opt ? `${opt.letter}. ${opt.text}` : letter;
+            }).join(', ');
+        }
+        return currentQuestion.answer;
     };
 
     return (
@@ -93,7 +116,9 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
 
                     {/* Question Content */}
                     <div className="question-body">
-                        <div className="question-badge">CÂU HỎI</div>
+                        <div className="question-badge" style={{ backgroundColor: isMultiple ? 'var(--warning-soft)' : 'var(--primary-soft)', color: isMultiple ? 'var(--warning)' : 'var(--primary)', fontWeight: 'bold' }}>
+                            {isMultiple ? 'CHỌN NHIỀU ĐÁP ÁN' : 'CHỌN MỘT ĐÁP ÁN'}
+                        </div>
                         {currentQuestion.image && (
                             <div className="question-image-container" style={{ marginBottom: '16px', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxWidth: '100%', maxHeight: '300px', display: 'flex', justifyContent: 'center', backgroundColor: 'var(--bg-app)' }}>
                                 <img src={currentQuestion.image} alt="Minh họa câu hỏi" style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }} />
@@ -109,13 +134,16 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
                             <div className="practice-choices-container" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '20px' }}>
                                 {parsed.options.map(opt => {
                                     let btnClass = 'choice-btn';
+                                    const isOptSelected = selectedOptions.includes(opt.letter);
+                                    const isOptCorrect = correctAnswers.includes(opt.letter);
+
                                     if (isChecked) {
-                                        if (opt.letter.toLowerCase() === correctAnswer.toLowerCase()) {
+                                        if (isOptCorrect) {
                                             btnClass += ' correct';
-                                        } else if (opt.letter.toLowerCase() === selectedOption.toLowerCase()) {
+                                        } else if (isOptSelected) {
                                             btnClass += ' incorrect';
                                         }
-                                    } else if (opt.letter.toLowerCase() === selectedOption.toLowerCase()) {
+                                    } else if (isOptSelected) {
                                         btnClass += ' selected';
                                     }
 
@@ -125,8 +153,9 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
                                             className={btnClass}
                                             onClick={() => handleOptionSelect(opt.letter)}
                                             disabled={isChecked}
+                                            style={{ display: 'flex', alignItems: 'center', textAlign: 'left' }}
                                         >
-                                            <span className="choice-letter">{opt.letter}</span>
+                                            <span className="choice-letter" style={{ borderRadius: isMultiple ? '6px' : '50%' }}>{opt.letter}</span>
                                             <span className="choice-text">{opt.text}</span>
                                         </button>
                                     );
@@ -167,7 +196,7 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
                                         {isCorrect ? 'Chính xác!' : 'Chưa chính xác!'}
                                     </h4>
                                     <p className="feedback-desc" style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                                        Đáp án đúng là: <strong>{getOptionText(correctAnswer)}</strong>
+                                        Đáp án đúng là: <strong>{getCorrectAnswersText()}</strong>
                                     </p>
                                 </div>
                             </div>

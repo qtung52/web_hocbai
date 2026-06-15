@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { extractQuestionAndOptions, shuffleArray, formatDuration } from '../utils/quizParser';
+import { extractQuestionAndOptions, shuffleArray, formatDuration, parseCorrectAnswers } from '../utils/quizParser';
 
 let audioCtx = null;
 function playChime(frequency, duration) {
@@ -248,10 +248,7 @@ export default function FlashcardView({ quizSet, onExit }) {
         return deck.length + easyOriginalCount;
     }
 
-    const getOptionText = (letter) => {
-        const opt = parsed.options.find(o => o.letter.toLowerCase() === letter.toLowerCase());
-        return opt ? `${opt.letter}. ${opt.text}` : letter;
-    };
+    const correctAnswers = parseCorrectAnswers(currentCard.answer, parsed.options);
 
     return (
         <section id="view-flashcard" className="app-view active">
@@ -348,9 +345,22 @@ export default function FlashcardView({ quizSet, onExit }) {
                                     <div className="card-content-scroll">
                                         <div className="fc-answer-container">
                                             <small style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '8px', fontWeight: '600' }}>Đáp án đúng là:</small>
-                                            <h3 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--success)' }}>
-                                                {getOptionText(correctAnswer)}
-                                            </h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center' }}>
+                                                {parsed.options.length > 0 ? (
+                                                    correctAnswers.map(letter => {
+                                                        const opt = parsed.options.find(o => o.letter.toUpperCase() === letter.toUpperCase());
+                                                        return (
+                                                            <h3 key={letter} style={{ fontSize: '22px', fontWeight: '700', color: 'var(--success)', margin: 0, textAlign: 'center' }}>
+                                                                {opt ? `${opt.letter}. ${opt.text}` : letter}
+                                                            </h3>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <h3 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--success)', margin: 0, textAlign: 'center' }}>
+                                                        {currentCard.answer}
+                                                    </h3>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="card-hint">Đáp án hệ thống</div>

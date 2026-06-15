@@ -131,8 +131,12 @@ export default function ResultsView({ attempt, onRetry, onPracticeFlashcard, onH
                                     {item.options.length > 0 ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {item.options.map(opt => {
-                                                const isUserSelect = item.userAnswer.toLowerCase() === opt.letter.toLowerCase();
-                                                const isCorrectAnswer = item.correctAnswer.toLowerCase() === opt.letter.toLowerCase();
+                                                const isUserSelect = Array.isArray(item.userAnswer)
+                                                    ? item.userAnswer.includes(opt.letter)
+                                                    : (item.userAnswer ? item.userAnswer.toUpperCase() === opt.letter.toUpperCase() : false);
+                                                const isCorrectAnswer = Array.isArray(item.correctAnswers)
+                                                    ? item.correctAnswers.includes(opt.letter)
+                                                    : (item.correctAnswer ? item.correctAnswer.split(/[\s,;]+/).map(s => s.trim().toUpperCase()).includes(opt.letter.toUpperCase()) : false);
 
                                                 let style = {
                                                     display: 'flex',
@@ -150,7 +154,7 @@ export default function ResultsView({ attempt, onRetry, onPracticeFlashcard, onH
                                                     style.borderColor = 'var(--success)';
                                                     style.backgroundColor = 'var(--success-soft)';
                                                     style.color = 'var(--success)';
-                                                } else if (isUserSelect && !item.isCorrect) {
+                                                } else if (isUserSelect && !isCorrectAnswer) {
                                                     style.borderColor = 'var(--danger)';
                                                     style.backgroundColor = 'var(--danger-soft)';
                                                     style.color = 'var(--danger)';
@@ -160,9 +164,9 @@ export default function ResultsView({ attempt, onRetry, onPracticeFlashcard, onH
                                                     <div key={opt.letter} style={style}>
                                                         <strong style={{ marginRight: '8px' }}>{opt.letter}.</strong>
                                                         <span>{opt.text}</span>
-                                                        {isCorrectAnswer && <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>✓ Đáp án đúng</span>}
-                                                        {isUserSelect && !item.isCorrect && <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>✗ Bạn chọn</span>}
-                                                        {isUserSelect && item.isCorrect && <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>✓ Bạn chọn đúng</span>}
+                                                        {isCorrectAnswer && isUserSelect && <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>✓ Bạn chọn đúng</span>}
+                                                        {isCorrectAnswer && !isUserSelect && <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>✓ Đáp án đúng</span>}
+                                                        {!isCorrectAnswer && isUserSelect && <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>✗ Bạn chọn sai</span>}
                                                     </div>
                                                 );
                                             })}

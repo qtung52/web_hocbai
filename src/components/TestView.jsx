@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { extractQuestionAndOptions, shuffleArray, formatDuration } from '../utils/quizParser';
+import { extractQuestionAndOptions, shuffleArray, formatDuration, parseCorrectAnswers } from '../utils/quizParser';
 
 export default function TestView({ quizSet, config, onCancel, onSubmit, showConfirm }) {
     const [testQuestions, setTestQuestions] = useState([]);
@@ -23,31 +23,39 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
             // Shuffling options if enabled
             const prepared = questions.map((origQ, qIdx) => {
                 const parsed = extractQuestionAndOptions(origQ.question);
-                const origCorrectLetter = origQ.answer.trim().toUpperCase();
-                const correctOpt = parsed.options.find(o => o.letter === origCorrectLetter);
-                const correctOptText = correctOpt ? correctOpt.text : origQ.answer;
+                const origCorrectLetters = parseCorrectAnswers(origQ.answer, parsed.options);
+                
+                // Get correct option texts
+                const correctOptTexts = origCorrectLetters.map(letter => {
+                    const opt = parsed.options.find(o => o.letter === letter);
+                    return opt ? opt.text : letter;
+                });
 
                 let finalOptions = [...parsed.options];
-                let newCorrectLetter = origCorrectLetter;
+                let newCorrectLetters = [...origCorrectLetters];
 
                 if (config.shuffleOptions && parsed.options.length > 0) {
                     const shuffledOptionsTexts = shuffleArray(parsed.options.map(o => o.text));
+                    newCorrectLetters = [];
                     finalOptions = parsed.options.map((opt, optIdx) => {
                         const letter = String.fromCharCode(65 + optIdx); // A, B, C, D...
                         const text = shuffledOptionsTexts[optIdx];
-                        if (text === correctOptText) {
-                            newCorrectLetter = letter;
+                        if (correctOptTexts.includes(text)) {
+                            newCorrectLetters.push(letter);
                         }
                         return { letter, text };
                     });
+                    newCorrectLetters.sort();
                 }
+
+                const isMultiple = newCorrectLetters.length > 1;
 
                 return {
                     id: `q-${qIdx}-${Date.now()}`,
                     description: parsed.description,
                     options: finalOptions,
-                    correctAnswer: newCorrectLetter,
-                    correctAnswerText: correctOptText,
+                    correctAnswers: newCorrectLetters,
+                    isMultiple: isMultiple,
                     originalQuestion: origQ.question,
                     image: origQ.image || ''
                 };
@@ -72,11 +80,27 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
 
     if (!quizSet || testQuestions.length === 0) return null;
 
-    const handleOptionSelect = (questionId, letter) => {
-        setUserAnswers({
-            ...userAnswers,
-            [questionId]: letter
-        });
+    const handleOptionSelect = (questionId, letter, isMultiple) => {
+        const currentAns = userAnswers[questionId];
+        if (isMultiple) {
+            const currentArr = Array.isArray(currentAns) ? currentAns : (currentAns ? [currentAns] : []);
+            let newArr;
+            if (currentArr.includes(letter)) {
+                newArr = currentArr.filter(l => l !== letter);
+            } else {
+                newArr = [...currentArr, letter];
+            }
+            newArr.sort();
+            setUserAnswers({
+                ...userAnswers,
+                [questionId]: newArr
+            });
+        } else {
+            setUserAnswers({
+                ...userAnswers,
+                [questionId]: letter
+            });
+        }
     };
 
     const handleNavClick = (idx) => {
@@ -94,24 +118,61 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const answeredCount = Object.keys(userAnswers).length;
+        const answeredCount = testQuestions.filter(q => {
+            const ans = userAnswers[q.id];
+            return q.isMultiple ? (Array.isArray(ans) && ans.length > 0) : !!ans;
+        }).length;
         const total = testQuestions.length;
 
         const processSubmit = () => {
             // Calculate score
             let correctCount = 0;
             const reviewDetails = testQuestions.map(q => {
-                const userAns = userAnswers[q.id] || '';
-                const correct = userAns.toLowerCase() === q.correctAnswer.toLowerCase();
+                const userAns = userAnswers[q.id] || (q.isMultiple ? [] : '');
+                
+                let correct = false;
+                if (q.options.length > 0) {
+                    if (q.isMultiple) {
+                        const userAnsArr = Array.isArray(userAns) ? userAns : [userAns].filter(Boolean);
+                        correct = userAnsArr.length === q.correctAnswers.length && 
+                                  userAnsArr.every(l => q.correctAnswers.includes(l));
+                    } else {
+                        const userAnsStr = Array.isArray(userAns) ? userAns[0] || '' : userAns;
+                        const correctAnsStr = q.correctAnswers[0] || '';
+                        correct = userAnsStr.toUpperCase() === correctAnsStr.toUpperCase();
+                    }
+                } else {
+                    // text answer (no options)
+                    const userAnsStr = Array.isArray(userAns) ? userAns.join(', ') : userAns;
+                    const correctAnsStr = q.correctAnswers.join(', ');
+                    correct = userAnsStr.trim().toLowerCase() === correctAnsStr.trim().toLowerCase();
+                }
+
                 if (correct) correctCount++;
+
+                // Format correct answer display text
+                let correctAnswerStr = '';
+                let correctAnswerTextStr = '';
+                if (q.options.length > 0) {
+                    correctAnswerStr = q.correctAnswers.join(', ');
+                    correctAnswerTextStr = q.options
+                        .filter(o => q.correctAnswers.includes(o.letter))
+                        .map(o => `${o.letter}. ${o.text}`)
+                        .join(', ');
+                } else {
+                    correctAnswerStr = q.correctAnswers.join(', ');
+                    correctAnswerTextStr = correctAnswerStr;
+                }
 
                 return {
                     description: q.description,
                     options: q.options,
                     userAnswer: userAns,
-                    correctAnswer: q.correctAnswer,
-                    correctAnswerText: q.correctAnswerText,
+                    correctAnswer: correctAnswerStr,
+                    correctAnswerText: correctAnswerTextStr,
                     isCorrect: correct,
+                    isMultiple: q.isMultiple,
+                    correctAnswers: q.correctAnswers,
                     image: q.image || ''
                 };
             });
@@ -142,7 +203,10 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
     };
 
     const totalQuestions = testQuestions.length;
-    const answeredCount = Object.keys(userAnswers).length;
+    const answeredCount = testQuestions.filter(q => {
+        const ans = userAnswers[q.id];
+        return q.isMultiple ? (Array.isArray(ans) && ans.length > 0) : !!ans;
+    }).length;
 
     return (
         <section id="view-test" className="app-view active">
@@ -169,8 +233,8 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
                                     style={{ marginBottom: '20px' }}
                                 >
                                     <div className="question-body">
-                                        <div className="question-badge" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }}>
-                                            Câu hỏi {idx + 1}
+                                        <div className="question-badge" style={{ backgroundColor: q.isMultiple ? 'var(--warning-soft)' : 'var(--primary-soft)', color: q.isMultiple ? 'var(--warning)' : 'var(--primary)', fontWeight: 'bold' }}>
+                                            Câu hỏi {idx + 1} {q.isMultiple ? '(Chọn nhiều đáp án)' : '(Chọn một đáp án)'}
                                         </div>
                                         {q.image && (
                                             <div className="question-image-container" style={{ marginTop: '12px', marginBottom: '16px', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxWidth: '100%', maxHeight: '240px', display: 'flex', justifyContent: 'center', backgroundColor: 'var(--bg-app)' }}>
@@ -185,7 +249,10 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
                                     {q.options.length > 0 ? (
                                         <div className="test-choices-list">
                                             {q.options.map(opt => {
-                                                const isSelected = userAnswers[q.id] === opt.letter;
+                                                const userAns = userAnswers[q.id];
+                                                const isSelected = q.isMultiple 
+                                                    ? (Array.isArray(userAns) && userAns.includes(opt.letter))
+                                                    : userAns === opt.letter;
                                                 return (
                                                     <label 
                                                         key={opt.letter} 
@@ -193,10 +260,10 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
                                                         style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', backgroundColor: 'var(--bg-app)', transition: 'var(--transition-all)', marginBottom: '8px' }}
                                                     >
                                                         <input 
-                                                            type="radio" 
+                                                            type={q.isMultiple ? "checkbox" : "radio"} 
                                                             name={`test-option-${q.id}`}
                                                             checked={isSelected}
-                                                            onChange={() => handleOptionSelect(q.id, opt.letter)}
+                                                            onChange={() => handleOptionSelect(q.id, opt.letter, q.isMultiple)}
                                                             style={{ margin: 0 }}
                                                         />
                                                         <span className="test-choice-text">
@@ -258,7 +325,10 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
                         <hr className="divider" />
                         <div className="question-nav-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                             {testQuestions.map((q, idx) => {
-                                const isAnswered = !!userAnswers[q.id];
+                                const ans = userAnswers[q.id];
+                                const isAnswered = q.isMultiple
+                                    ? (Array.isArray(ans) && ans.length > 0)
+                                    : !!ans;
                                 return (
                                     <button 
                                         key={q.id}
