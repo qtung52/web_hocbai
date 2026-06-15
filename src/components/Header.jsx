@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function Header({ searchQuery, onSearchQueryChange, showSearch }) {
+export default function Header({ searchQuery, onSearchQueryChange, showSearch, onToggleSidebar }) {
     const [currentTime, setCurrentTime] = useState('');
 
     useEffect(() => {
@@ -16,6 +16,18 @@ export default function Header({ searchQuery, onSearchQueryChange, showSearch })
 
     return (
         <header className="top-header">
+            <button 
+                type="button" 
+                className="hamburger-btn" 
+                onClick={onToggleSidebar}
+                aria-label="Toggle sidebar"
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="20" height="20">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+            </button>
             <div className="header-search">
                 {showSearch && (
                     <div className="search-wrapper" id="search-bar-container">
@@ -35,9 +47,6 @@ export default function Header({ searchQuery, onSearchQueryChange, showSearch })
             </div>
             <div className="header-profile">
                 <div className="datetime" id="current-datetime">{currentTime}</div>
-                <div className="user-avatar">
-                    <span>ST</span>
-                </div>
             </div>
         </header>
     );
