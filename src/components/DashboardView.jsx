@@ -10,6 +10,7 @@ export default function DashboardView({
     onStartTest,
     onEditQuiz,
     onDeleteQuiz,
+    onShareQuiz,
     onQuickCreate
 }) {
     // 1. Local state for folder filter
@@ -167,6 +168,16 @@ export default function DashboardView({
                     <div className="quiz-grid" id="quiz-sets-grid" style={{ display: 'grid' }}>
                         {filteredSets.map(set => (
                             <div className="quiz-card" key={set.id}>
+                                <button 
+                                    className="quiz-card-share-btn" 
+                                    title="Chia sẻ bộ câu hỏi" 
+                                    aria-label="Share quiz"
+                                    onClick={() => onShareQuiz(set)}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                </button>
                                 <button 
                                     className="quiz-card-edit-btn" 
                                     title="Chỉnh sửa bộ câu hỏi" 

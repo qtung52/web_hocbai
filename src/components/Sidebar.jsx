@@ -1,7 +1,20 @@
-export default function Sidebar({ currentView, onViewChange, onToggleTheme, isOpen, user, onLogout }) {
+export default function Sidebar({ currentView, onViewChange, onToggleTheme, isOpen, user, onLogout, onClose }) {
     return (
         <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-            <div className="brand" onClick={() => onViewChange('view-dashboard')} style={{ cursor: 'pointer' }}>
+            {/* Close button for mobile */}
+            <button 
+                type="button" 
+                className="sidebar-close-btn" 
+                onClick={onClose}
+                aria-label="Đóng sidebar"
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="20" height="20">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+
+            <div className="brand" onClick={() => { onViewChange('view-dashboard'); if (onClose) onClose(); }} style={{ cursor: 'pointer' }}>
                 <div className="brand-logo">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

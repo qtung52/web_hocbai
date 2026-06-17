@@ -11,6 +11,7 @@ import FlashcardView from './components/FlashcardView';
 import TestSetupModal from './components/TestSetupModal';
 import AuthView from './components/AuthView';
 import ProfileSettingsView from './components/ProfileSettingsView';
+import ShareView from './components/ShareView';
 import { supabase } from './utils/supabase';
 
 const viewToHash = {
@@ -45,8 +46,16 @@ export default function App() {
     const [attempts, setAttempts] = useState([]);
     const [currentView, setCurrentView] = useState(() => {
         const initialHash = window.location.hash;
+        if (initialHash && initialHash.startsWith('#/share/')) {
+            return 'view-share';
+        }
         return (initialHash && hashToView[initialHash]) ? hashToView[initialHash] : 'view-dashboard';
     });
+    const [sharedQuizId, setSharedQuizId] = useState(() => {
+        const initialHash = window.location.hash;
+        return (initialHash && initialHash.startsWith('#/share/')) ? initialHash.replace('#/share/', '') : null;
+    });
+    const [shareModalConfig, setShareModalConfig] = useState(null); // { isOpen, quizTitle, shareUrl, copied }
     const [activeQuizSet, setActiveQuizSet] = useState(null);
     const [editingQuizId, setEditingQuizId] = useState(null);
     const [activeAttempt, setActiveAttempt] = useState(null);
@@ -101,15 +110,33 @@ export default function App() {
         window.scrollTo(0, 0);
     }, [currentView]);
 
+    // Lock body scroll when mobile sidebar is open
+    useEffect(() => {
+        if (isSidebarOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isSidebarOpen]);
+
 
 
     // Listen for browser back/forward buttons (hash changes)
     useEffect(() => {
         const handleHashChange = () => {
             const currentHash = window.location.hash || '#/home';
-            const targetView = hashToView[currentHash];
-            if (targetView && targetView !== currentView) {
-                setCurrentView(targetView);
+            if (currentHash.startsWith('#/share/')) {
+                const quizId = currentHash.replace('#/share/', '');
+                setSharedQuizId(quizId);
+                setCurrentView('view-share');
+            } else {
+                const targetView = hashToView[currentHash];
+                if (targetView && targetView !== currentView) {
+                    setCurrentView(targetView);
+                }
             }
         };
 
@@ -119,11 +146,20 @@ export default function App() {
 
     // Sync React state views to hash URL
     useEffect(() => {
-        const targetHash = viewToHash[currentView] || '#/home';
-        if (window.location.hash !== targetHash) {
-            window.location.hash = targetHash;
+        if (currentView === 'view-share') {
+            if (sharedQuizId) {
+                const targetHash = `#/share/${sharedQuizId}`;
+                if (window.location.hash !== targetHash) {
+                    window.location.hash = targetHash;
+                }
+            }
+        } else {
+            const targetHash = viewToHash[currentView] || '#/home';
+            if (window.location.hash !== targetHash) {
+                window.location.hash = targetHash;
+            }
         }
-    }, [currentView]);
+    }, [currentView, sharedQuizId]);
 
     useEffect(() => {
         // Fetch current session
@@ -410,6 +446,56 @@ export default function App() {
         setCurrentView('view-results');
     };
 
+    const handleShareQuiz = (quiz) => {
+        const origin = window.location.origin;
+        const shareUrl = `${origin}/#/share/${quiz.id}`;
+        setShareModalConfig({
+            isOpen: true,
+            quizTitle: quiz.title,
+            shareUrl,
+            copied: false
+        });
+    };
+
+    const handleImportQuizSet = async (sharedQuiz) => {
+        if (!user) return;
+        const targetId = 'quiz-' + Date.now();
+        const createdAt = new Date().toISOString();
+
+        try {
+            const dbData = {
+                id: targetId,
+                user_id: user.id,
+                title: sharedQuiz.title,
+                folder: sharedQuiz.folder,
+                questions: sharedQuiz.questions,
+                created_at: createdAt
+            };
+
+            const { error } = await supabase
+                .from('quiz_sets')
+                .upsert(dbData);
+
+            if (error) throw error;
+
+            const newSet = {
+                id: targetId,
+                title: dbData.title,
+                folder: dbData.folder,
+                questions: dbData.questions,
+                createdAt: dbData.created_at
+            };
+
+            setQuizSets(prev => [newSet, ...prev]);
+            showAlert('Lưu bộ câu hỏi vào thư viện thành công!', 'Thành công', () => {
+                setCurrentView('view-dashboard');
+            });
+        } catch (err) {
+            console.error('Error importing quiz set:', err);
+            showAlert('Không thể lưu bộ câu hỏi vào đám mây. Vui lòng thử lại.', 'Lỗi lưu dữ liệu');
+        }
+    };
+
     const handleLogout = async () => {
         try {
             const { error } = await supabase.auth.signOut();
@@ -483,6 +569,7 @@ export default function App() {
                 isOpen={isSidebarOpen}
                 user={user}
                 onLogout={handleLogout}
+                onClose={() => setIsSidebarOpen(false)}
             />
 
             {/* Sidebar Backdrop Overlay on Mobile */}
@@ -512,7 +599,22 @@ export default function App() {
                             onStartTest={handleStartTestTrigger}
                             onEditQuiz={handleEditQuizSet}
                             onDeleteQuiz={handleDeleteQuizSet}
+                            onShareQuiz={handleShareQuiz}
                             onQuickCreate={() => { setEditingQuizId(null); setCurrentView('view-manage-quiz'); }}
+                        />
+                    )}
+
+                    {currentView === 'view-share' && (
+                        <ShareView 
+                            sharedQuizId={sharedQuizId}
+                            user={user}
+                            onImport={handleImportQuizSet}
+                            onStartPractice={(quiz) => {
+                                setActiveQuizSet(quiz);
+                                setCurrentView('view-practice');
+                            }}
+                            onHome={() => setCurrentView('view-dashboard')}
+                            showAlert={showAlert}
                         />
                     )}
 
@@ -587,6 +689,87 @@ export default function App() {
                 onCancel={() => setIsTestSetupOpen(false)}
                 onStart={handleStartTestConfirm}
             />
+
+            {/* Share Modal */}
+            {shareModalConfig && shareModalConfig.isOpen && (
+                <div className="custom-modal-overlay">
+                    <div className="custom-modal-card" style={{ maxWidth: '500px' }}>
+                        <div className="custom-modal-header">
+                            <div className="custom-modal-icon alert" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="20" height="20">
+                                    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
+                            <h3 className="custom-modal-title">Chia sẻ bộ câu hỏi</h3>
+                        </div>
+                        <div className="custom-modal-body">
+                            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                                Chia sẻ liên kết dưới đây để người dùng khác có thể luyện tập hoặc lưu bộ câu hỏi <strong>"{shareModalConfig.quizTitle}"</strong> vào thư viện của họ.
+                            </p>
+                             <div className="share-link-container">
+                                <input 
+                                    type="text" 
+                                    className="share-link-input" 
+                                    value={shareModalConfig.shareUrl} 
+                                    readOnly 
+                                    onClick={(e) => e.target.select()}
+                                />
+                                <button 
+                                    type="button" 
+                                    className={`btn btn-sm ${shareModalConfig.copied ? 'btn-success' : 'btn-primary'} share-copy-btn`}
+                                    onClick={() => {
+                                        const text = shareModalConfig.shareUrl;
+                                        const doCopy = () => {
+                                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                return navigator.clipboard.writeText(text);
+                                            } else {
+                                                const textArea = document.createElement("textarea");
+                                                textArea.value = text;
+                                                textArea.style.position = "fixed";
+                                                document.body.appendChild(textArea);
+                                                textArea.focus();
+                                                textArea.select();
+                                                try {
+                                                    document.execCommand('copy');
+                                                    document.body.removeChild(textArea);
+                                                    return Promise.resolve();
+                                                } catch (err) {
+                                                    document.body.removeChild(textArea);
+                                                    return Promise.reject(err);
+                                                }
+                                            }
+                                        };
+                                        
+                                        doCopy()
+                                            .then(() => {
+                                                setShareModalConfig(prev => ({ ...prev, copied: true }));
+                                                setTimeout(() => {
+                                                    setShareModalConfig(prev => ({ ...prev, copied: false }));
+                                                }, 2000);
+                                            })
+                                            .catch(err => {
+                                                console.error('Copy failed:', err);
+                                                showAlert('Không thể tự động sao chép. Vui lòng chọn và sao chép thủ công liên kết.', 'Lỗi sao chép');
+                                            });
+                                    }}
+                                >
+                                    {shareModalConfig.copied ? 'Đã chép ✓' : 'Sao chép'}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="custom-modal-footer">
+                            <button 
+                                type="button" 
+                                className="btn btn-outline" 
+                                onClick={() => setShareModalConfig(null)}
+                                style={{ width: '100%' }}
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Custom Alert & Confirm Modal Overlay */}
             {modalConfig && (
