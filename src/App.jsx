@@ -290,13 +290,16 @@ export default function App() {
         const createdAt = existingSet ? existingSet.createdAt : new Date().toISOString();
 
         try {
+            const creatorName = user.user_metadata?.display_name || user.email || 'Ẩn danh';
             const dbData = {
                 id: targetId,
                 user_id: user.id,
                 title,
                 folder: folder || 'Chưa phân loại',
                 questions,
-                created_at: createdAt
+                created_at: createdAt,
+                // Only set creator_name on new quizzes, not edits
+                ...(isNew ? { creator_name: creatorName } : {})
             };
 
             const { error } = await supabase

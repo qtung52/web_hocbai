@@ -49,7 +49,8 @@ export default function ShareView({
                         title: data.title,
                         folder: data.folder || 'Chưa phân loại',
                         questions: data.questions || [],
-                        createdAt: data.created_at
+                        createdAt: data.created_at,
+                        creatorName: data.creator_name || null
                     });
                 }
             } catch (err) {
@@ -145,10 +146,31 @@ export default function ShareView({
                         <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>
                             {quizSet.title}
                         </h2>
-                        <div className="quiz-card-meta" style={{ margin: 0 }}>
-                            <span style={{ marginRight: '16px' }}>📝 {quizSet.questions.length} câu hỏi</span>
+                        <div className="quiz-card-meta" style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                            <span>📝 {quizSet.questions.length} câu hỏi</span>
                             <span>📅 Ngày tạo: {formatShortDate(quizSet.createdAt)}</span>
                         </div>
+                        {quizSet.creatorName && (
+                            <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                marginTop: '12px',
+                                background: 'var(--bg-app)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: 'var(--radius-md)',
+                                padding: '6px 12px',
+                                fontSize: '13px',
+                                color: 'var(--text-muted)'
+                            }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                                <span>Chia sẻ bởi:</span>
+                                <strong style={{ color: 'var(--text-main)' }}>{quizSet.creatorName}</strong>
+                            </div>
+                        )}
                     </div>
                 </div>
 
