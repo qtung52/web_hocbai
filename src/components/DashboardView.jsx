@@ -13,30 +13,77 @@ export default function DashboardView({
     onShareQuiz,
     onQuickCreate
 }) {
-    // 1. Local state for folder filter
     const [activeFolderFilter, setActiveFolderFilter] = useState('Tất cả');
+    const [exportQuiz, setExportQuiz] = useState(null);
+    const [copied, setCopied] = useState(false);
 
-    // 2. Calculate statistics
+    // Build plain text from a quiz set
+    const buildExportText = (set) => {
+        const lines = [];
+        lines.push(`=== ${set.title} ===`);
+        lines.push(`Thư mục: ${set.folder || 'Chưa phân loại'}`);
+        lines.push(`Số câu hỏi: ${set.questions.length}`);
+        lines.push('');
+        set.questions.forEach((q, idx) => {
+            const text = q.question || q.questionText || '';
+            lines.push(`Câu ${idx + 1}: ${text}`);
+            lines.push(`Đáp án: ${q.answer || ''}`);
+            lines.push('');
+        });
+        return lines.join('\n');
+    };
+
+    const handleExport = (set) => {
+        setExportQuiz(set);
+        setCopied(false);
+    };
+
+    const handleCopy = (text) => {
+        const doCopy = () => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(text);
+            }
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            try { document.execCommand('copy'); document.body.removeChild(ta); return Promise.resolve(); }
+            catch (e) { document.body.removeChild(ta); return Promise.reject(e); }
+        };
+        doCopy().then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+
+    const handleDownload = (set, text) => {
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${set.title.replace(/[/\\?%*:|"<>]/g, '-')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    // Statistics
     const totalSets = quizSets.length;
     const totalAttempts = attempts.length;
-
     let highestScore = '0%';
     let averageAccuracy = '0%';
-
     if (totalAttempts > 0) {
         const highest = Math.max(...attempts.map(a => a.accuracy));
         highestScore = `${Math.round(highest)}%`;
-
-        const sumAccuracy = attempts.reduce((sum, current) => sum + current.accuracy, 0);
-        const avg = sumAccuracy / totalAttempts;
+        const avg = attempts.reduce((s, a) => s + a.accuracy, 0) / totalAttempts;
         averageAccuracy = `${Math.round(avg)}%`;
     }
 
-    // 3. Extract unique folders list
     const uniqueFolders = Array.from(new Set(quizSets.map(set => set.folder || 'Chưa phân loại').filter(Boolean)));
     const foldersList = ['Tất cả', ...uniqueFolders];
 
-    // 4. Filter quiz sets based on searchQuery and folder filter
     const filteredSets = quizSets.filter(set => {
         const matchesSearch = set.title.toLowerCase().includes(searchQuery.toLowerCase());
         const setFolder = set.folder || 'Chưa phân loại';
@@ -44,6 +91,7 @@ export default function DashboardView({
         return matchesSearch && matchesFolder;
     });
 
+    const exportText = exportQuiz ? buildExportText(exportQuiz) : '';
 
     return (
         <section id="view-dashboard" className="app-view active">
@@ -73,7 +121,6 @@ export default function DashboardView({
                         <span className="stats-label">Bộ Câu Hỏi Đã Tạo</span>
                     </div>
                 </div>
-
                 <div className="stats-card">
                     <div className="stats-icon success">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -85,7 +132,6 @@ export default function DashboardView({
                         <span className="stats-label">Tổng Lượt Làm Bài</span>
                     </div>
                 </div>
-
                 <div className="stats-card">
                     <div className="stats-icon warning">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -97,7 +143,6 @@ export default function DashboardView({
                         <span className="stats-label">Điểm Số Cao Nhất</span>
                     </div>
                 </div>
-
                 <div className="stats-card">
                     <div className="stats-icon info">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -118,7 +163,6 @@ export default function DashboardView({
                     <div className="filter-badge">{filteredSets.length} bộ câu hỏi</div>
                 </div>
 
-                {/* Folder Tabs Filter */}
                 {quizSets.length > 0 && (
                     <div className="folder-tabs-wrapper" style={{ marginBottom: '24px', overflowX: 'auto' }}>
                         <div className="folder-tabs" style={{ display: 'flex', gap: '8px', paddingBottom: '4px' }}>
@@ -129,19 +173,12 @@ export default function DashboardView({
                                     className={`folder-tab-btn ${activeFolderFilter === folderName ? 'active' : ''}`}
                                     onClick={() => setActiveFolderFilter(folderName)}
                                     style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        padding: '8px 16px',
-                                        fontSize: '13px',
-                                        fontWeight: '500',
-                                        borderRadius: 'var(--radius-full)',
-                                        border: '1px solid var(--border-color)',
+                                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                        padding: '8px 16px', fontSize: '13px', fontWeight: '500',
+                                        borderRadius: 'var(--radius-full)', border: '1px solid var(--border-color)',
                                         background: activeFolderFilter === folderName ? 'var(--primary)' : 'var(--bg-card)',
                                         color: activeFolderFilter === folderName ? 'var(--text-on-primary)' : 'var(--text-muted)',
-                                        cursor: 'pointer',
-                                        transition: 'var(--transition-all)',
-                                        whiteSpace: 'nowrap'
+                                        cursor: 'pointer', transition: 'var(--transition-all)', whiteSpace: 'nowrap'
                                     }}
                                 >
                                     <span>📁</span>
@@ -152,7 +189,6 @@ export default function DashboardView({
                     </div>
                 )}
 
-                {/* Empty state */}
                 {filteredSets.length === 0 ? (
                     <div className="empty-state" id="empty-quiz-state">
                         <div className="empty-icon">
@@ -168,9 +204,10 @@ export default function DashboardView({
                     <div className="quiz-grid" id="quiz-sets-grid" style={{ display: 'grid' }}>
                         {filteredSets.map(set => (
                             <div className="quiz-card" key={set.id}>
-                                <button 
-                                    className="quiz-card-share-btn" 
-                                    title="Chia sẻ bộ câu hỏi" 
+                                {/* Action buttons top-right */}
+                                <button
+                                    className="quiz-card-share-btn"
+                                    title="Chia sẻ bộ câu hỏi"
                                     aria-label="Share quiz"
                                     onClick={() => onShareQuiz(set)}
                                 >
@@ -178,9 +215,23 @@ export default function DashboardView({
                                         <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" strokeLinecap="round" strokeLinejoin="round"/>
                                     </svg>
                                 </button>
-                                <button 
-                                    className="quiz-card-edit-btn" 
-                                    title="Chỉnh sửa bộ câu hỏi" 
+                                <button
+                                    className="quiz-card-export-btn"
+                                    title="Xuất nội dung văn bản"
+                                    aria-label="Export quiz text"
+                                    onClick={() => handleExport(set)}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                        <polyline points="10 9 9 9 8 9"/>
+                                    </svg>
+                                </button>
+                                <button
+                                    className="quiz-card-edit-btn"
+                                    title="Chỉnh sửa bộ câu hỏi"
                                     aria-label="Edit quiz"
                                     onClick={() => onEditQuiz(set.id)}
                                 >
@@ -188,9 +239,9 @@ export default function DashboardView({
                                         <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                     </svg>
                                 </button>
-                                <button 
-                                    className="quiz-card-delete-btn" 
-                                    title="Xóa bộ câu hỏi" 
+                                <button
+                                    className="quiz-card-delete-btn"
+                                    title="Xóa bộ câu hỏi"
                                     aria-label="Delete quiz"
                                     onClick={() => onDeleteQuiz(set.id)}
                                 >
@@ -201,15 +252,10 @@ export default function DashboardView({
 
                                 <div className="quiz-card-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px', marginBottom: '12px' }}>
                                     <span className="quiz-folder-badge" style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        backgroundColor: 'var(--primary-soft)',
-                                        color: 'var(--primary)',
-                                        padding: '4px 8px',
-                                        borderRadius: 'var(--radius-sm)',
-                                        fontSize: '11px',
-                                        fontWeight: '600'
+                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                        backgroundColor: 'var(--primary-soft)', color: 'var(--primary)',
+                                        padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                                        fontSize: '11px', fontWeight: '600'
                                     }}>
                                         📁 {set.folder || 'Chưa phân loại'}
                                     </span>
@@ -230,20 +276,20 @@ export default function DashboardView({
                                     </div>
                                 </div>
                                 <div className="quiz-card-actions">
-                                    <button 
-                                        className="btn btn-outline-primary btn-flashcard-trigger" 
+                                    <button
+                                        className="btn btn-outline-primary btn-flashcard-trigger"
                                         style={{ gridColumn: 'span 2' }}
                                         onClick={() => onStartFlashcard(set.id)}
                                     >
                                         Học Flashcard 3D 🔄
                                     </button>
-                                    <button 
+                                    <button
                                         className="btn btn-outline btn-practice-trigger"
                                         onClick={() => onStartPractice(set.id)}
                                     >
                                         Luyện Tập
                                     </button>
-                                    <button 
+                                    <button
                                         className="btn btn-primary btn-test-trigger"
                                         onClick={() => onStartTest(set.id)}
                                     >
@@ -255,6 +301,75 @@ export default function DashboardView({
                     </div>
                 )}
             </div>
+
+            {/* Export Text Modal */}
+            {exportQuiz && (
+                <div className="custom-modal-overlay" onClick={() => setExportQuiz(null)}>
+                    <div
+                        className="custom-modal-card"
+                        style={{ maxWidth: '680px', width: '95%' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="custom-modal-header">
+                            <div className="custom-modal-icon alert" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="20" height="20">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                </svg>
+                            </div>
+                            <h3 className="custom-modal-title">Xuất nội dung văn bản</h3>
+                        </div>
+
+                        <div className="custom-modal-body">
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                                📋 <strong>{exportQuiz.title}</strong> — {exportQuiz.questions.length} câu hỏi
+                            </p>
+                            <textarea
+                                readOnly
+                                value={exportText}
+                                onClick={e => e.target.select()}
+                                style={{
+                                    width: '100%',
+                                    height: '320px',
+                                    resize: 'vertical',
+                                    fontFamily: 'monospace',
+                                    fontSize: '12px',
+                                    lineHeight: '1.6',
+                                    padding: '12px',
+                                    borderRadius: 'var(--radius-md)',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'var(--bg-app)',
+                                    color: 'var(--text-main)',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        <div className="custom-modal-footer" style={{ display: 'flex', gap: '8px' }}>
+                            <button type="button" className="btn btn-outline" onClick={() => setExportQuiz(null)}>
+                                Đóng
+                            </button>
+                            <button
+                                type="button"
+                                className={`btn ${copied ? 'btn-success' : 'btn-outline'}`}
+                                onClick={() => handleCopy(exportText)}
+                                style={{ minWidth: '120px' }}
+                            >
+                                {copied ? '✓ Đã sao chép!' : '📋 Sao chép'}
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => handleDownload(exportQuiz, exportText)}
+                            >
+                                ⬇️ Tải file .txt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 }

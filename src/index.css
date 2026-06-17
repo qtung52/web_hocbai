@@ -804,7 +804,8 @@ html[data-theme="dark"] .toggle-circle {
 
 .quiz-card-edit-btn,
 .quiz-card-delete-btn,
-.quiz-card-share-btn {
+.quiz-card-share-btn,
+.quiz-card-export-btn {
     position: absolute;
     top: 12px;
     right: 12px;
@@ -827,13 +828,18 @@ html[data-theme="dark"] .toggle-circle {
     right: 48px;
 }
 
-.quiz-card-share-btn {
+.quiz-card-export-btn {
     right: 84px;
+}
+
+.quiz-card-share-btn {
+    right: 120px;
 }
 
 .quiz-card:hover .quiz-card-edit-btn,
 .quiz-card:hover .quiz-card-delete-btn,
-.quiz-card:hover .quiz-card-share-btn {
+.quiz-card:hover .quiz-card-share-btn,
+.quiz-card:hover .quiz-card-export-btn {
     opacity: 1;
 }
 
@@ -853,6 +859,12 @@ html[data-theme="dark"] .toggle-circle {
     color: var(--primary);
     background-color: var(--primary-soft);
     border-color: var(--primary);
+}
+
+.quiz-card-export-btn:hover {
+    color: var(--success);
+    background-color: var(--success-soft);
+    border-color: var(--success);
 }
 
 .section-title-bar {
