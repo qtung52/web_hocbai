@@ -6,6 +6,7 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
     const [userAnswers, setUserAnswers] = useState({}); // { [qId]: selectedLetter }
     const [seconds, setSeconds] = useState(0);
     const timerRef = useRef(null);
+    const autoSubmitRef = useRef(null);
 
     // 1. Prepare questions based on configuration
     useEffect(() => {
@@ -63,20 +64,82 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
 
             setTestQuestions(prepared);
             setUserAnswers({});
-            setSeconds(0);
+            // If countdown, start from timeLimit; else start from 0
+            setSeconds(config.timeLimit > 0 ? config.timeLimit : 0);
         }
     }, [quizSet, config]);
 
-    // 2. Start Timer
+    // 2. Start Timer (count up or count down)
     useEffect(() => {
-        timerRef.current = setInterval(() => {
-            setSeconds(prev => prev + 1);
-        }, 1000);
+        if (config.timeLimit > 0) {
+            // Countdown mode
+            timerRef.current = setInterval(() => {
+                setSeconds(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timerRef.current);
+                        // Store flag to trigger auto-submit
+                        autoSubmitRef.current = true;
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            // Count-up mode
+            timerRef.current = setInterval(() => {
+                setSeconds(prev => prev + 1);
+            }, 1000);
+        }
 
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
     }, []);
+
+    // Auto-submit when countdown hits 0
+    useEffect(() => {
+        if (config.timeLimit > 0 && seconds === 0 && autoSubmitRef.current) {
+            autoSubmitRef.current = false;
+            // Build and submit the attempt automatically
+            let correctCount = 0;
+            const reviewDetails = testQuestions.map(q => {
+                const userAns = userAnswers[q.id] || (q.isMultiple ? [] : '');
+                let correct = false;
+                if (q.options.length > 0) {
+                    if (q.isMultiple) {
+                        const userAnsArr = Array.isArray(userAns) ? userAns : [userAns].filter(Boolean);
+                        correct = userAnsArr.length === q.correctAnswers.length &&
+                                  userAnsArr.every(l => q.correctAnswers.includes(l));
+                    } else {
+                        const userAnsStr = Array.isArray(userAns) ? userAns[0] || '' : userAns;
+                        correct = userAnsStr.toUpperCase() === (q.correctAnswers[0] || '').toUpperCase();
+                    }
+                } else {
+                    const userAnsStr = Array.isArray(userAns) ? userAns.join(', ') : userAns;
+                    correct = userAnsStr.trim().toLowerCase() === q.correctAnswers.join(', ').trim().toLowerCase();
+                }
+                if (correct) correctCount++;
+                const correctAnswerStr = q.correctAnswers.join(', ');
+                const correctAnswerTextStr = q.options.length > 0
+                    ? q.options.filter(o => q.correctAnswers.includes(o.letter)).map(o => `${o.letter}. ${o.text}`).join(', ')
+                    : correctAnswerStr;
+                return { description: q.description, options: q.options, userAnswer: userAns, correctAnswer: correctAnswerStr, correctAnswerText: correctAnswerTextStr, isCorrect: correct, isMultiple: q.isMultiple, correctAnswers: q.correctAnswers, image: q.image || '' };
+            });
+            const accuracy = testQuestions.length > 0 ? (correctCount / testQuestions.length) * 100 : 0;
+            const attempt = {
+                id: 'attempt-' + Date.now(),
+                quizId: quizSet.id,
+                quizTitle: quizSet.title,
+                createdAt: new Date().toISOString(),
+                duration: config.timeLimit,
+                correctCount,
+                totalCount: testQuestions.length,
+                accuracy,
+                reviewDetails
+            };
+            onSubmit(attempt);
+        }
+    }, [seconds]);
 
     if (!quizSet || testQuestions.length === 0) return null;
 
@@ -303,22 +366,45 @@ export default function TestView({ quizSet, config, onCancel, onSubmit, showConf
 
                 {/* Right pane: Floating widgets */}
                 <div className="quiz-sidebar-info fixed-sidebar">
-                    <div className="card-panel timer-widget" style={{ marginBottom: '20px' }}>
-                        <div className="timer-display" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div className="timer-icon" style={{ color: 'var(--primary)' }}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <path d="M12 6v6l4 2"/>
-                                </svg>
+                    {(() => {
+                        const isCountdown = config.timeLimit > 0;
+                        const isWarning = isCountdown && seconds <= 300; // < 5 min
+                        const isCritical = isCountdown && seconds <= 60; // < 1 min
+                        const timerColor = isCritical ? 'var(--danger)' : isWarning ? 'var(--warning)' : 'var(--primary)';
+                        const timerBg = isCritical ? 'var(--danger-soft)' : isWarning ? 'var(--warning-soft)' : 'var(--primary-soft)';
+                        return (
+                            <div className="card-panel timer-widget" style={{
+                                marginBottom: '20px',
+                                border: isCritical ? '2px solid var(--danger)' : isWarning ? '2px solid var(--warning)' : undefined,
+                                transition: 'border-color 0.3s'
+                            }}>
+                                <div className="timer-display" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div className="timer-icon" style={{ color: timerColor, backgroundColor: timerBg, width: '44px', height: '44px', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <path d="M12 6v6l4 2"/>
+                                        </svg>
+                                    </div>
+                                    <div className="timer-time">
+                                        <span style={{ fontSize: '22px', fontWeight: '700', color: timerColor, display: 'block', fontFamily: 'monospace', transition: 'color 0.3s' }}>
+                                            {formatDuration(seconds)}
+                                        </span>
+                                        <small style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                            {isCountdown
+                                                ? (isCritical ? '⚠️ Sắp hết giờ!' : isWarning ? '⚡ Còn ít thời gian' : '⏱️ Thời gian còn lại')
+                                                : 'Thời gian làm bài'
+                                            }
+                                        </small>
+                                    </div>
+                                </div>
+                                {isCritical && (
+                                    <div style={{ marginTop: '8px', padding: '6px 10px', backgroundColor: 'var(--danger-soft)', borderRadius: 'var(--radius-sm)', fontSize: '12px', color: 'var(--danger)', fontWeight: '600', textAlign: 'center', animation: 'pulse 1s infinite' }}>
+                                        🚨 Bài sẽ tự nộp khi hết giờ!
+                                    </div>
+                                )}
                             </div>
-                            <div className="timer-time">
-                                <span style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-main)', display: 'block' }}>
-                                    {formatDuration(seconds)}
-                                </span>
-                                <small style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Thời gian làm bài</small>
-                            </div>
-                        </div>
-                    </div>
+                        );
+                    })()}
 
                     <div className="card-panel navigation-widget">
                         <h3>Danh sách câu hỏi</h3>

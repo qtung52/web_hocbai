@@ -1,22 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { extractQuestionAndOptions, shuffleArray, parseCorrectAnswers } from '../utils/quizParser';
 
-export default function PracticeView({ quizSet, onExit, showAlert }) {
+export default function PracticeView({ quizSet, wrongQuestions, onExit, showAlert }) {
     const [shuffledQuestions, setShuffledQuestions] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedOptions, setSelectedOptions] = useState([]);
     const [textAnswer, setTextAnswer] = useState('');
     const [isChecked, setIsChecked] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
+    const isWrongMode = !!wrongQuestions && wrongQuestions.length > 0;
 
     useEffect(() => {
-        if (quizSet && quizSet.questions.length > 0) {
-            // Shuffle all questions for practice mode (no slicing to 20!)
-            setShuffledQuestions(shuffleArray(quizSet.questions));
+        // Use wrongQuestions if provided, otherwise use quizSet.questions
+        const sourceQuestions = isWrongMode
+            ? wrongQuestions.map(item => ({
+                question: item.description,  // description is parsed question text
+                answer: item.correctAnswer,
+                options: item.options,       // pass pre-parsed options through
+                image: item.image || ''
+              }))
+            : (quizSet && quizSet.questions ? quizSet.questions : []);
+
+        if (sourceQuestions.length > 0) {
+            setShuffledQuestions(shuffleArray(sourceQuestions));
             setCurrentIndex(0);
             resetQuestionState();
         }
-    }, [quizSet]);
+    }, [quizSet, wrongQuestions]);
 
     const resetQuestionState = () => {
         setSelectedOptions([]);
@@ -31,7 +41,9 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
     const totalQuestions = shuffledQuestions.length;
     const progressPercent = Math.round(((currentIndex + 1) / totalQuestions) * 100);
 
-    const parsed = extractQuestionAndOptions(currentQuestion.question);
+    const parsed = isWrongMode && currentQuestion.options
+        ? { description: currentQuestion.question, options: currentQuestion.options }
+        : extractQuestionAndOptions(currentQuestion.question);
     const correctAnswers = parseCorrectAnswers(currentQuestion.answer, parsed.options);
     const isMultiple = correctAnswers.length > 1;
 
@@ -74,7 +86,10 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
             setCurrentIndex(currentIndex + 1);
             resetQuestionState();
         } else {
-            showAlert('Chúc mừng! Bạn đã hoàn thành việc ôn tập tất cả các câu hỏi trong bộ đề này.', 'Thông báo', onExit);
+            const doneMsg = isWrongMode
+                ? 'Chúc mừng! Bạn đã ôn xong tất cả câu sai. Hãy thử kiểm tra lại toàn bộ bài!'
+                : 'Chúc mừng! Bạn đã hoàn thành việc ôn tập tất cả các câu hỏi trong bộ đề này.';
+            showAlert(doneMsg, 'Thông báo', onExit);
         }
     };
 
@@ -93,11 +108,15 @@ export default function PracticeView({ quizSet, onExit, showAlert }) {
         <section id="view-practice" className="app-view active">
             <div className="view-header">
                 <div>
-                    <h1>Chế Độ Luyện Tập</h1>
-                    <p className="subtitle">Kiểm tra kiến thức từng câu một, hiển thị đáp án lập tức. Đã nạp tất cả các câu hỏi.</p>
+                    <h1>{isWrongMode ? '📌 Ôn Câu Sai' : 'Chế Độ Luyện Tập'}</h1>
+                    <p className="subtitle">
+                        {isWrongMode
+                            ? `Đang ôn lại ${totalQuestions} câu trả lời sai — tập trung vào điểm yếu của bạn.`
+                            : 'Kiểm tra kiến thức từng câu một, hiển thị đáp án lập tức. Đã nạp tất cả các câu hỏi.'}
+                    </p>
                 </div>
                 <button className="btn btn-outline" onClick={onExit}>
-                    Thoát Luyện Tập
+                    {isWrongMode ? 'Quay Lại Kết Quả' : 'Thoát Luyện Tập'}
                 </button>
             </div>
 

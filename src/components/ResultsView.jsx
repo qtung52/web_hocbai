@@ -1,8 +1,11 @@
 import React from 'react';
 import { formatDuration } from '../utils/quizParser';
 
-export default function ResultsView({ attempt, onRetry, onPracticeFlashcard, onHome }) {
+export default function ResultsView({ attempt, onRetry, onPracticeFlashcard, onPracticeWrong, onHome }) {
     if (!attempt) return null;
+
+    const wrongItems = attempt.reviewDetails.filter(item => !item.isCorrect);
+    const hasWrong = wrongItems.length > 0;
 
     const radius = 80;
     const circumference = radius * 2 * Math.PI;
@@ -194,10 +197,19 @@ export default function ResultsView({ attempt, onRetry, onPracticeFlashcard, onH
                         </div>
                     </div>
 
-                    <div className="results-action-buttons" style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                    <div className="results-action-buttons" style={{ display: 'flex', gap: '12px', marginTop: '24px', flexWrap: 'wrap' }}>
                         <button className="btn btn-primary" style={{ flex: 1 }} onClick={onRetry}>
-                            Làm Lại Bài Thi
+                            🔁 Làm Lại Bài Thi
                         </button>
+                        {hasWrong && (
+                            <button
+                                className="btn btn-danger"
+                                style={{ flex: 1 }}
+                                onClick={() => onPracticeWrong(wrongItems)}
+                            >
+                                📌 Ôn {wrongItems.length} Câu Sai
+                            </button>
+                        )}
                         <button className="btn btn-outline" style={{ flex: 1 }} onClick={onPracticeFlashcard}>
                             Luyện Tập Chế Độ Thẻ
                         </button>

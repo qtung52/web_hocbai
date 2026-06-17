@@ -64,6 +64,8 @@ export default function App() {
     const [isTestSetupOpen, setIsTestSetupOpen] = useState(false);
     const [testSetupQuiz, setTestSetupQuiz] = useState(null);
     const [activeTestConfig, setActiveTestConfig] = useState(null);
+    // Practice wrong answers state
+    const [wrongQuestionsForPractice, setWrongQuestionsForPractice] = useState(null);
 
     // Theme & Search State
     const [theme, setTheme] = useState(() => localStorage.getItem('eduquiz_theme') || 'light');
@@ -457,7 +459,14 @@ export default function App() {
 
     const handleViewAttemptDetails = (attempt) => {
         setActiveAttempt(attempt);
+        setWrongQuestionsForPractice(null);
         setCurrentView('view-results');
+    };
+
+    const handlePracticeWrong = (wrongItems) => {
+        setWrongQuestionsForPractice(wrongItems);
+        setActiveQuizSet(null);
+        setCurrentView('view-practice');
     };
 
     const handleShareQuiz = (quiz) => {
@@ -649,7 +658,16 @@ export default function App() {
                     {currentView === 'view-practice' && (
                         <PracticeView 
                             quizSet={activeQuizSet}
-                            onExit={() => setCurrentView('view-dashboard')}
+                            wrongQuestions={wrongQuestionsForPractice}
+                            onExit={() => {
+                                if (wrongQuestionsForPractice) {
+                                    // Go back to results
+                                    setWrongQuestionsForPractice(null);
+                                    setCurrentView('view-results');
+                                } else {
+                                    setCurrentView('view-dashboard');
+                                }
+                            }}
                             showAlert={showAlert}
                         />
                     )}
@@ -670,6 +688,7 @@ export default function App() {
                             attempt={activeAttempt}
                             onRetry={() => handleStartTestTrigger(activeAttempt.quizId)}
                             onPracticeFlashcard={() => handleStartFlashcard(activeAttempt.quizId)}
+                            onPracticeWrong={handlePracticeWrong}
                             onHome={() => setCurrentView('view-dashboard')}
                         />
                     )}
