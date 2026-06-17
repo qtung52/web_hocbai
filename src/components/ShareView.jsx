@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../utils/supabase';
+import { anonymousSupabase as supabase } from '../utils/supabase';
 import { formatShortDate } from '../utils/quizParser';
 
 export default function ShareView({
@@ -8,7 +8,8 @@ export default function ShareView({
     onImport,
     onStartPractice,
     onHome,
-    showAlert
+    showAlert,
+    showConfirm
 }) {
     const [quizSet, setQuizSet] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -100,7 +101,14 @@ export default function ShareView({
                     <span className="share-login-banner-text">
                         🔒 Bạn chưa đăng nhập. Vui lòng đăng nhập hoặc đăng ký tài khoản để có thể lưu bộ câu hỏi này vào thư viện học tập.
                     </span>
-                    <button className="btn btn-sm btn-primary" onClick={onHome} style={{ fontSize: '13px', padding: '6px 12px' }}>
+                    <button 
+                        className="btn btn-sm btn-primary" 
+                        onClick={() => {
+                            sessionStorage.setItem('redirect_hash', window.location.hash);
+                            onHome();
+                        }} 
+                        style={{ fontSize: '13px', padding: '6px 12px' }}
+                    >
                         Đăng nhập ngay
                     </button>
                 </div>
@@ -178,7 +186,19 @@ export default function ShareView({
                         style={{ flex: 1.5, padding: '12px' }}
                         onClick={() => {
                             if (!user) {
-                                showAlert('Vui lòng đăng nhập để thực hiện tính năng này.', 'Yêu cầu đăng nhập');
+                                if (showConfirm) {
+                                    showConfirm(
+                                        'Bạn cần đăng nhập để lưu bộ câu hỏi này vào thư viện. Bạn có muốn đăng nhập ngay không?',
+                                        () => {
+                                            sessionStorage.setItem('redirect_hash', window.location.hash);
+                                            onHome();
+                                        },
+                                        null,
+                                        'Yêu cầu đăng nhập'
+                                    );
+                                } else {
+                                    showAlert('Vui lòng đăng nhập để thực hiện tính năng này.', 'Yêu cầu đăng nhập');
+                                }
                                 return;
                             }
                             onImport(quizSet);

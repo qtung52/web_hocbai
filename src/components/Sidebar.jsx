@@ -29,53 +29,68 @@ export default function Sidebar({ currentView, onViewChange, onToggleTheme, isOp
             </div>
             
             <nav className="nav-menu">
-                <a 
-                    href="#" 
-                    className={`nav-item ${currentView === 'view-dashboard' ? 'active' : ''}`}
-                    onClick={(e) => { e.preventDefault(); onViewChange('view-dashboard'); }}
-                >
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/>
-                        <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/>
-                        <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/>
-                        <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/>
-                    </svg>
-                    <span>Trang Chủ</span>
-                </a>
+                {user ? (
+                    <>
+                        <a 
+                            href="#" 
+                            className={`nav-item ${currentView === 'view-dashboard' ? 'active' : ''}`}
+                            onClick={(e) => { e.preventDefault(); onViewChange('view-dashboard'); }}
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/>
+                                <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/>
+                                <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/>
+                                <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                            <span>Trang Chủ</span>
+                        </a>
 
-                <a 
-                    href="#" 
-                    className={`nav-item ${currentView === 'view-manage-quiz' ? 'active' : ''}`}
-                    onClick={(e) => { e.preventDefault(); onViewChange('view-manage-quiz'); }}
-                >
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <span>Tạo Bộ Câu Hỏi</span>
-                </a>
+                        <a 
+                            href="#" 
+                            className={`nav-item ${currentView === 'view-manage-quiz' ? 'active' : ''}`}
+                            onClick={(e) => { e.preventDefault(); onViewChange('view-manage-quiz'); }}
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span>Tạo Bộ Câu Hỏi</span>
+                        </a>
 
-                <a 
-                    href="#" 
-                    className={`nav-item ${currentView === 'view-stats' ? 'active' : ''}`}
-                    onClick={(e) => { e.preventDefault(); onViewChange('view-stats'); }}
-                >
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18 20V10M12 20V4M6 20V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <span>Thống Kê Lịch Sử</span>
-                </a>
+                        <a 
+                            href="#" 
+                            className={`nav-item ${currentView === 'view-stats' ? 'active' : ''}`}
+                            onClick={(e) => { e.preventDefault(); onViewChange('view-stats'); }}
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 20V10M12 20V4M6 20V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span>Thống Kê Lịch Sử</span>
+                        </a>
 
-                <a 
-                    href="#" 
-                    className={`nav-item ${currentView === 'view-profile-settings' ? 'active' : ''}`}
-                    onClick={(e) => { e.preventDefault(); onViewChange('view-profile-settings'); }}
-                >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <span>Cài Đặt Hồ Sơ</span>
-                </a>
+                        <a 
+                            href="#" 
+                            className={`nav-item ${currentView === 'view-profile-settings' ? 'active' : ''}`}
+                            onClick={(e) => { e.preventDefault(); onViewChange('view-profile-settings'); }}
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span>Cài Đặt Hồ Sơ</span>
+                        </a>
+                    </>
+                ) : (
+                    <a 
+                        href="#" 
+                        className="nav-item"
+                        onClick={(e) => { e.preventDefault(); onViewChange('view-dashboard'); }}
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span>Đăng nhập / Đăng ký</span>
+                    </a>
+                )}
             </nav>
 
             <div className="sidebar-footer">

@@ -175,7 +175,14 @@ export default function App() {
             if (event === 'PASSWORD_RECOVERY') {
                 setIsPasswordRecovery(true);
             }
-            if (!session?.user) {
+            if (session?.user) {
+                // If there is a redirect hash stored, restore it
+                const redirectHash = sessionStorage.getItem('redirect_hash');
+                if (redirectHash) {
+                    sessionStorage.removeItem('redirect_hash');
+                    window.location.hash = redirectHash;
+                }
+            } else {
                 // Clear states on logout
                 setQuizSets([]);
                 setAttempts([]);
@@ -515,7 +522,9 @@ export default function App() {
         );
     }
 
-    if (!user || isPasswordRecovery) {
+    const isPublicView = currentView === 'view-share' || (currentView === 'view-practice' && activeQuizSet);
+
+    if ((!user && !isPublicView) || isPasswordRecovery) {
         return (
             <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--bg-app)' }}>
                 <AuthView 
@@ -615,6 +624,7 @@ export default function App() {
                             }}
                             onHome={() => setCurrentView('view-dashboard')}
                             showAlert={showAlert}
+                            showConfirm={showConfirm}
                         />
                     )}
 
