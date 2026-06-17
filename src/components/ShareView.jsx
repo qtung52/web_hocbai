@@ -104,7 +104,11 @@ export default function ShareView({
                     <button 
                         className="btn btn-sm btn-primary" 
                         onClick={() => {
-                            sessionStorage.setItem('redirect_hash', window.location.hash);
+                            try {
+                                sessionStorage.setItem('redirect_hash', window.location.hash);
+                            } catch (storageErr) {
+                                console.warn('Could not set sessionStorage:', storageErr);
+                            }
                             onHome();
                         }} 
                         style={{ fontSize: '13px', padding: '6px 12px' }}
@@ -190,7 +194,11 @@ export default function ShareView({
                                     showConfirm(
                                         'Bạn cần đăng nhập để lưu bộ câu hỏi này vào thư viện. Bạn có muốn đăng nhập ngay không?',
                                         () => {
-                                            sessionStorage.setItem('redirect_hash', window.location.hash);
+                                            try {
+                                                sessionStorage.setItem('redirect_hash', window.location.hash);
+                                            } catch (storageErr) {
+                                                console.warn('Could not set sessionStorage:', storageErr);
+                                            }
                                             onHome();
                                         },
                                         null,

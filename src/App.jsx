@@ -177,12 +177,16 @@ export default function App() {
             }
             if (session?.user) {
                 // If there is a redirect hash stored, restore it
-                const redirectHash = sessionStorage.getItem('redirect_hash');
-                if (redirectHash) {
-                    sessionStorage.removeItem('redirect_hash');
-                    window.location.hash = redirectHash;
+                try {
+                    const redirectHash = sessionStorage.getItem('redirect_hash');
+                    if (redirectHash) {
+                        sessionStorage.removeItem('redirect_hash');
+                        window.location.hash = redirectHash;
+                    }
+                } catch (storageErr) {
+                    console.warn('Could not access sessionStorage:', storageErr);
                 }
-            } else {
+            } else if (event === 'SIGNED_OUT') {
                 // Clear states on logout
                 setQuizSets([]);
                 setAttempts([]);
