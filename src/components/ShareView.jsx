@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { anonymousSupabase as supabase } from '../utils/supabase';
+import { supabase } from '../utils/supabase';
 import { formatShortDate } from '../utils/quizParser';
 
 export default function ShareView({
@@ -22,13 +22,24 @@ export default function ShareView({
             setLoading(true);
             setError(null);
             try {
-                const { data, error: fetchError } = await supabase
-                    .from('quiz_sets')
-                    .select('*')
-                    .eq('id', sharedQuizId)
-                    .maybeSingle(); // Use maybeSingle to avoid errors if 0 rows returned
+                // Use the Supabase REST API directly with anon key to bypass any session-based RLS
+                const response = await fetch(
+                    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/quiz_sets?id=eq.${encodeURIComponent(sharedQuizId)}&select=*`,
+                    {
+                        headers: {
+                            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                            'Accept': 'application/json',
+                        }
+                    }
+                );
 
-                if (fetchError) throw fetchError;
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const rows = await response.json();
+                const data = rows && rows.length > 0 ? rows[0] : null;
 
                 if (!data) {
                     setError('Không tìm thấy bộ câu hỏi được chia sẻ hoặc dữ liệu đã bị xóa.');
@@ -75,10 +86,6 @@ export default function ShareView({
                 <p style={{ marginBottom: '24px' }}>{error}</p>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <button className="btn btn-primary" onClick={onHome}>Quay về Trang Chủ</button>
-                </div>
-                
-                <div style={{ marginTop: '24px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'left', background: 'var(--bg-app)', padding: '12px', borderRadius: 'var(--radius-md)' }}>
-                    💡 <strong>Lưu ý cho Quản trị viên:</strong> Nếu bộ câu hỏi tồn tại nhưng vẫn báo lỗi, hãy đảm bảo bạn đã cấu hình RLS Policy <code>SELECT</code> trên Supabase Console cho phép người dùng khác đọc bảng <code>quiz_sets</code>.
                 </div>
             </div>
         );
@@ -150,30 +157,49 @@ export default function ShareView({
                 </h3>
 
                 <div className="questions-preview-list">
-                    {quizSet.questions.map((q, idx) => (
-                        <div className="question-preview-item" key={idx}>
-                            <div className="question-preview-title">
-                                Câu {idx + 1}: {q.questionText}
+                    {quizSet.questions.map((q, idx) => {
+                        // Parse raw DB format: { question: "...\nA. ...", answer: "B", image: "" }
+                        const questionText = q.question || q.questionText || '';
+                        const answerText = (q.answer || '').trim().toUpperCase().charAt(0);
+                        const lines = questionText.split('\n');
+                        const descLines = [];
+                        const optionLines = [];
+                        lines.forEach(line => {
+                            const trimmed = line.trim();
+                            if (/^[A-Z]\s*[\.\-\)]\s*/i.test(trimmed)) {
+                                optionLines.push(trimmed);
+                            } else if (trimmed) {
+                                descLines.push(trimmed);
+                            }
+                        });
+                        const description = descLines.join(' ');
+
+                        return (
+                            <div className="question-preview-item" key={idx}>
+                                <div className="question-preview-title">
+                                    Câu {idx + 1}: {description || questionText}
+                                </div>
+                                {optionLines.length > 0 && (
+                                    <div className="answers-preview-grid">
+                                        {optionLines.map((optLine, oIdx) => {
+                                            const optLetter = optLine.charAt(0).toUpperCase();
+                                            const isCorrect = optLetter === answerText;
+                                            return (
+                                                <div
+                                                    key={oIdx}
+                                                    className={`answer-preview-option ${isCorrect ? 'correct' : ''}`}
+                                                >
+                                                    <span style={{ fontWeight: '600' }}>{optLetter}.</span>
+                                                    <span>{optLine.replace(/^[A-Z]\s*[\.\-\)]\s*/i, '')}</span>
+                                                    {isCorrect && <span style={{ marginLeft: 'auto' }}>✓ Đáp án đúng</span>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                            <div className="answers-preview-grid">
-                                {q.options.map((opt, oIdx) => {
-                                    const isCorrect = oIdx === q.correctOptionIndex;
-                                    return (
-                                        <div 
-                                            key={oIdx} 
-                                            className={`answer-preview-option ${isCorrect ? 'correct' : ''}`}
-                                        >
-                                            <span style={{ fontWeight: '600' }}>
-                                                {String.fromCharCode(65 + oIdx)}.
-                                            </span>
-                                            <span>{opt}</span>
-                                            {isCorrect && <span style={{ marginLeft: 'auto' }}>✓ Đáp án đúng</span>}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <div className="share-actions">
